@@ -45,13 +45,25 @@ function getWeatherDescription(code) {
     return weatherCodes[code] || 'Unknown weather';
 }
 
+// Function to get a short location name
+function getShortLocationName(fullName) {
+    // Split by comma and take the first part
+    const parts = fullName.split(',');
+    // Take the first part and remove any district/region information
+    let shortName = parts[0].split(' - ')[0].trim();
+    // Remove any postal code if present
+    shortName = shortName.replace(/\d{5}/, '').trim();
+    return shortName;
+}
+
 // Function to display weather information
 function displayWeather(locationName, weatherData) {
     const content = document.getElementById('weather-content');
+    const shortLocationName = getShortLocationName(locationName);
     
     // Create weather display HTML
     const weatherHTML = `
-        <h1 class="location">${locationName}</h1>
+        <h1 class="location">${shortLocationName}</h1>
         <div class="weather-info">
             <div class="temperature">${weatherData.temperature}°C</div>
             <div class="description">${getWeatherDescription(weatherData.weathercode)}</div>
