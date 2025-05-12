@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Weather Link</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .generator-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin: 1rem 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .location-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .copy-link {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        .copy-link:hover {
+            background: #45a049;
+        }
+
+        .back-link {
+            color: #ffffff;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Leaflet dark theme overrides */
+        .leaflet-container {
+            background: #2d2d2d !important;
+        }
+
+        .leaflet-control-zoom a {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+            border-color: #333 !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background-color: #333 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="generator-container">
+        <a href="index.html" class="back-link">← Back to Weather</a>
+        <h1>Generate Weather Link</h1>
+        <p>Click on the map to select a location and generate a weather link.</p>
+        
+        <div id="map"></div>
+        
+        <div class="location-info">
+            <h3>Selected Location</h3>
+            <p id="selected-location">No location selected</p>
+            <p id="coordinates"></p>
+            <button class="copy-link" id="copy-link" disabled>Copy Weather Link</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let marker;
+        let selectedLocation = null;
+
+        // Initialize map
+        function initMap() {
+            // Create map centered on South Tyrol
+            map = L.map('map').setView([46.4983, 11.3548], 8);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add click listener to map
+            map.on('click', (event) => {
+                const lat = event.latlng.lat;
+                const lng = event.latlng.lng;
+                
+                // Update marker
+                if (marker) {
+                    marker.setLatLng(event.latlng);
+                } else {
+                    marker = L.marker(event.latlng).addTo(map);
+                }
+
+                // Get location name using reverse geocoding
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
+                    .then(response => response.json())
+                    .then(data => {
+                        selectedLocation = {
+                            name: data.display_name,
+                            lat: lat,
+                            lng: lng
+                        };
+                        
+                        document.getElementById('selected-location').textContent = selectedLocation.name;
+                        document.getElementById('coordinates').textContent = 
+                            `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
+                        document.getElementById('copy-link').disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Error getting location name:', error);
+                        selectedLocation = {
+                            name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                            lat: lat,
+                            lng: lng
+                        };
+                        document.getElementById('selected-location').textContent = selectedLocation.name;
+                        document.getElementById('coordinates').textContent = 
+                            `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
+                        document.getElementById('copy-link').disabled = false;
+                    });
+            });
+        }
+
+        // Initialize map when page loads
+        document.addEventListener('DOMContentLoaded', initMap);
+
+        // Copy link to clipboard
+        document.getElementById('copy-link').addEventListener('click', () => {
+            if (selectedLocation) {
+                // Get the current base URL
+                const baseUrl = window.location.href.split('/gen.html')[0];
+                const weatherLink = `${baseUrl}/index.html?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
+                
+                navigator.clipboard.writeText(weatherLink).then(() => {
+                    const button = document.getElementById('copy-link');
+                    button.textContent = 'Link Copied!';
+                    setTimeout(() => {
+                        button.textContent = 'Copy Weather Link';
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
