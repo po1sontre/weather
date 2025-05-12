@@ -150,9 +150,9 @@
         // Copy link to clipboard
         document.getElementById('copy-link').addEventListener('click', () => {
             if (selectedLocation) {
-                // Get the current base URL
-                const baseUrl = window.location.href.split('/gen.html')[0];
-                const weatherLink = `${baseUrl}/index.html?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
+                // Get the current base URL and remove any trailing slashes
+                const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
+                const weatherLink = `${baseUrl}?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
                 
                 navigator.clipboard.writeText(weatherLink).then(() => {
                     const button = document.getElementById('copy-link');
