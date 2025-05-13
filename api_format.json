@@ -1,0 +1,289 @@
+{
+    "id": 95281,
+    "date": "2025-05-13T00:00:00",
+    "hour": "11:00",
+    "today": {
+      "date": "2025-05-13T00:00:00",
+      "hour": "11:00",
+      "title": "Sonne und Wolken",
+      "conditions": "Eine flache Druckverteilung und mäßig feuchte Luftmassen sorgen für leicht wechselhafte Verhältnisse.",
+      "temperatures": "Die Temperaturen steigen auf Höchstwerte von 20° in Sterzing bis 24° in Bozen.",
+      "stationData": [
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 21,
+          "min": 11
+        },
+        {
+          "symbol": {
+            "code": "f",
+            "description": "Wolkig, mäßiger Regen",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_6.png"
+          },
+          "max": 23,
+          "min": 13
+        },
+        {
+          "symbol": {
+            "code": "f",
+            "description": "Wolkig, mäßiger Regen",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_6.png"
+          },
+          "max": 24,
+          "min": 13
+        },
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 20,
+          "min": 8
+        },
+        {
+          "symbol": {
+            "code": "f",
+            "description": "Wolkig, mäßiger Regen",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_6.png"
+          },
+          "max": 22,
+          "min": 11
+        },
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 21,
+          "min": 10
+        }
+      ],
+      "imageUrl": "https://weather.services.siag.it/api/v2/graphics/maps/HDmeteomap0/95281/de",
+      "weather": "Im Großteil des Landes gibt es eine Mischung aus Sonne und Wolken. Am Nachmittag werden die Quellwolken wieder größer und daraus sind ein paar lokale Schauer möglich.",
+      "bulletinStatus": 16,
+      "type": "WEAT11",
+      "tMinMin": 8,
+      "tMinMax": 13,
+      "tMaxMin": 20,
+      "tMaxMax": 24,
+      "reliability": 80
+    },
+    "tomorrow": {
+      "date": "2025-05-14T00:00:00",
+      "hour": "11:00",
+      "title": "Recht sonnig mit frühsommerlichen Temperaturen",
+      "conditions": "Die Luftmassen werden allmählich trockener und schwacher Hochdruckeinfluss sorgt meist für stabile Verhältnisse.",
+      "temperatures": "Die Temperaturen erreichen Höchstwerte von 21° bis 26°.",
+      "stationData": [
+        {
+          "symbol": {
+            "code": "b",
+            "description": "Heiter",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_2.png"
+          },
+          "max": 22,
+          "min": 8
+        },
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 25,
+          "min": 11
+        },
+        {
+          "symbol": {
+            "code": "b",
+            "description": "Heiter",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_2.png"
+          },
+          "max": 26,
+          "min": 12
+        },
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 21,
+          "min": 6
+        },
+        {
+          "symbol": {
+            "code": "c",
+            "description": "Wolkig",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+          },
+          "max": 23,
+          "min": 9
+        },
+        {
+          "symbol": {
+            "code": "b",
+            "description": "Heiter",
+            "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_2.png"
+          },
+          "max": 22,
+          "min": 7
+        }
+      ],
+      "imageUrl": "https://weather.services.siag.it/api/v2/graphics/maps/HDmeteomap1/95281/de",
+      "weather": "Nach Auflösung von Hochnebelfeldern wird es im ganzen Land recht sonnig. Am Nachmittag entstehen erneut einige Quellwolken, es kommt aber nur mehr zu einzelnen kurzen Schauern.",
+      "bulletinStatus": 16,
+      "type": "WEAT11",
+      "tMinMin": 6,
+      "tMinMax": 12,
+      "tMaxMin": 21,
+      "tMaxMax": 26,
+      "reliability": 80
+    },
+    "mountainToday": {
+      "date": "2025-05-13T00:00:00",
+      "title": "Sonne, Wolken und einzelne Schauer",
+      "weather": "Am Nachmittag nimmt die Schauerneigung vor allem Richtung Süden wieder zu. Richtung Norden bleibt es sonniger.",
+      "conditions": "Eine flache Druckverteilung und mäßig feuchte Luftmassen sorgen für leicht wechselhafte Verhältnisse.",
+      "temp1000": 16,
+      "temp2000": 6,
+      "temp3000": -2,
+      "temp4000": -9,
+      "snowLimit": [2400],
+      "zeroLimit": 2700,
+      "north": {
+        "code": "c",
+        "description": "Wolkig",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+      },
+      "south": {
+        "code": "f",
+        "description": "Wolkig, mäßiger Regen",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_6.png"
+      },
+      "wind": {
+        "code": "B1",
+        "description": "schwach aus Nordost",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wind/wind_1_no.png"
+      },
+      "reliability": 80,
+      "moonRise": "22:02",
+      "moonSet": "05:35",
+      "sunRise": "05:45",
+      "sunSet": "20:40",
+      "imageUrl": "https://weather.services.siag.it/api/v2/graphics/maps/HDmountainmap0/95281/de"
+    },
+    "mountainTomorrow": {
+      "date": "2025-05-14T00:00:00",
+      "title": "Recht sonniges Bergwetter",
+      "weather": "Auf den Bergen behindern Hochnebel zunächst stellenweise die Sicht. Ansonsten scheint häufig die Sonne und erst im Laufe des Nachmittags entstehen aus den Quellwolken einzelne Schauer.",
+      "conditions": "Die Luftmassen werden allmählich trockener und schwacher Hochdruckeinfluss sorgt meist für stabile Verhältnisse.",
+      "temp1000": 16,
+      "temp2000": 6,
+      "temp3000": -1,
+      "temp4000": -9,
+      "snowLimit": [],
+      "zeroLimit": 2900,
+      "north": {
+        "code": "c",
+        "description": "Wolkig",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+      },
+      "south": {
+        "code": "c",
+        "description": "Wolkig",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+      },
+      "wind": {
+        "code": "A1",
+        "description": "schwach aus Nord",
+        "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wind/wind_1_n.png"
+      },
+      "reliability": 80,
+      "moonRise": "23:06",
+      "moonSet": "06:07",
+      "sunRise": "05:43",
+      "sunSet": "20:41",
+      "imageUrl": "https://weather.services.siag.it/api/v2/graphics/maps/HDmountainmap1/95281/de"
+    },
+    "bulletinStatus": 16,
+    "type": "WEAT11",
+    "evolution": "Am Donnerstag überwiegt der Sonnenschein, gegen Abend wird es am Alpenhauptkamm wechselhafter und in den nördlichen Tälern föhnig.\r\nAm Freitag scheint meist die Sonne mit nur harmlosen Wolken. In vielen Tälern weht Nordföhn. Die Temperaturen gehen zurück.\r\nAm Samstag geht es mit Sonne und Wolken weiter. Es bleibt föhnig mit Höchstwerten bis maximal 24°.\r\nAm Sonntag scheint verbreitet die Sonne und die Quellwolken bleiben meist harmlos.",
+    "evolutionTitle": "Sonne und Wolken",
+    "dayForecasts": [
+      {
+        "date": "2025-05-15T00:00:00",
+        "reliability": 70,
+        "symbol": {
+          "code": "c",
+          "description": "Wolkig",
+          "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+        },
+        "tempMax": {
+          "min": 18,
+          "max": 26
+        },
+        "tempMin": {
+          "min": 3,
+          "max": 11
+        }
+      },
+      {
+        "date": "2025-05-16T00:00:00",
+        "reliability": 70,
+        "symbol": {
+          "code": "b",
+          "description": "Heiter",
+          "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_2.png"
+        },
+        "tempMax": {
+          "min": 14,
+          "max": 23
+        },
+        "tempMin": {
+          "min": 2,
+          "max": 11
+        }
+      },
+      {
+        "date": "2025-05-17T00:00:00",
+        "reliability": 70,
+        "symbol": {
+          "code": "c",
+          "description": "Wolkig",
+          "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_3.png"
+        },
+        "tempMax": {
+          "min": 15,
+          "max": 24
+        },
+        "tempMin": {
+          "min": 1,
+          "max": 9
+        }
+      },
+      {
+        "date": "2025-05-18T00:00:00",
+        "reliability": 70,
+        "symbol": {
+          "code": "b",
+          "description": "Heiter",
+          "imageUrl": "https://weather.services.siag.it/api/v2/graphics/icons/HDimgsource/wetter/icon_2.png"
+        },
+        "tempMax": {
+          "min": 16,
+          "max": 25
+        },
+        "tempMin": {
+          "min": 3,
+          "max": 10
+        }
+      }
+    ]
+  }

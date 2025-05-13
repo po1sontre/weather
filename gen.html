@@ -80,6 +80,10 @@
         
         <div class="location-info">
             <h3>Selected Location</h3>
+            <select id="city-select">
+                <option value="">-- Select a city/station --</option>
+            </select>
+            <div id="city-weather-summary" style="display:none;"></div>
             <p id="selected-location">No location selected</p>
             <p id="coordinates"></p>
             <button class="copy-link" id="copy-link" disabled>Copy Weather Link</button>
@@ -91,77 +95,164 @@
         let map;
         let marker;
         let selectedLocation = null;
+        let selectedCity = null;
+        let stationsList = [];
+
+        // Fetch SIAG stations and populate dropdown
+        function fetchStations() {
+            fetch('https://weather.services.siag.it/api/v2/station/')
+                .then(res => res.json())
+                .then(data => {
+                    stationsList = data.rows;
+                    const select = document.getElementById('city-select');
+                    data.rows.forEach(station => {
+                        const opt = document.createElement('option');
+                        opt.value = station.name;
+                        opt.textContent = station.name;
+                        select.appendChild(opt);
+                    });
+                });
+        }
+
+        // Handle city selection
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchStations();
+            initMap();
+            document.getElementById('city-select').addEventListener('change', (e) => {
+                const cityName = e.target.value;
+                selectedCity = stationsList.find(s => s.name === cityName);
+                const summaryBox = document.getElementById('city-weather-summary');
+                if (selectedCity) {
+                    // Format last updated time
+                    let lastUpdated = selectedCity.lastUpdated;
+                    let formattedTime = '';
+                    if (lastUpdated) {
+                        const d = new Date(lastUpdated.replace('T', ' '));
+                        formattedTime = `Last updated: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString()}`;
+                    }
+                    summaryBox.innerHTML = `
+                        <div style="font-size:1.5rem;font-weight:700;">${selectedCity.name}</div>
+                        <div style="font-size:2.2rem;margin:0.5rem 0;">${selectedCity.t ? selectedCity.t + '°C' : '--'}</div>
+                        <div>Humidity: <b>${selectedCity.rh ? selectedCity.rh + '%' : '--'}</b></div>
+                        <div>Wind: <b>${selectedCity.ff ? selectedCity.ff + ' km/h' : '--'} ${selectedCity.dd || ''}</b></div>
+                        <div style="margin-top:0.5rem;font-size:1rem;color:#ccc;">${formattedTime}</div>
+                    `;
+                    summaryBox.style.display = '';
+                    document.getElementById('selected-location').style.display = 'none';
+                    document.getElementById('coordinates').style.display = 'none';
+                    document.getElementById('copy-link').disabled = false;
+                } else {
+                    summaryBox.style.display = 'none';
+                    document.getElementById('selected-location').style.display = '';
+                    document.getElementById('coordinates').style.display = '';
+                    document.getElementById('selected-location').textContent = 'No location selected';
+                    document.getElementById('coordinates').textContent = '';
+                    document.getElementById('copy-link').disabled = true;
+                }
+            });
+        });
 
         // Initialize map
         function initMap() {
-            // Create map centered on South Tyrol
             map = L.map('map').setView([46.4983, 11.3548], 8);
-
-            // Add OpenStreetMap tiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
-
-            // Add click listener to map
             map.on('click', (event) => {
                 const lat = event.latlng.lat;
                 const lng = event.latlng.lng;
-                
-                // Update marker
                 if (marker) {
                     marker.setLatLng(event.latlng);
                 } else {
                     marker = L.marker(event.latlng).addTo(map);
                 }
-
-                // Get location name using reverse geocoding
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
-                    .then(response => response.json())
+                // Try to fetch nearest station
+                fetch(`https://weather.services.siag.it/api/v2/station?longitude=${lng}&latitude=${lat}&numStations=1&visibility=1`)
+                    .then(res => res.json())
                     .then(data => {
-                        selectedLocation = {
-                            name: data.display_name,
-                            lat: lat,
-                            lng: lng
-                        };
-                        
-                        document.getElementById('selected-location').textContent = selectedLocation.name;
-                        document.getElementById('coordinates').textContent = 
-                            `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
-                        document.getElementById('copy-link').disabled = false;
-                    })
-                    .catch(error => {
-                        console.error('Error getting location name:', error);
-                        selectedLocation = {
-                            name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                            lat: lat,
-                            lng: lng
-                        };
-                        document.getElementById('selected-location').textContent = selectedLocation.name;
-                        document.getElementById('coordinates').textContent = 
-                            `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
-                        document.getElementById('copy-link').disabled = false;
+                        if (data.rows && data.rows.length > 0) {
+                            selectedCity = data.rows[0];
+                            selectedLocation = null;
+                            document.getElementById('city-select').value = '';
+                            // Format last updated time
+                            let lastUpdated = selectedCity.lastUpdated;
+                            let formattedTime = '';
+                            if (lastUpdated) {
+                                const d = new Date(lastUpdated.replace('T', ' '));
+                                formattedTime = `Last updated: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString()}`;
+                            }
+                            const summaryBox = document.getElementById('city-weather-summary');
+                            summaryBox.innerHTML = `
+                                <div style="font-size:1.5rem;font-weight:700;">${selectedCity.name}</div>
+                                <div style="font-size:2.2rem;margin:0.5rem 0;">${selectedCity.t ? selectedCity.t + '°C' : '--'}</div>
+                                <div>Humidity: <b>${selectedCity.rh ? selectedCity.rh + '%' : '--'}</b></div>
+                                <div>Wind: <b>${selectedCity.ff ? selectedCity.ff + ' km/h' : '--'} ${selectedCity.dd || ''}</b></div>
+                                <div style="margin-top:0.5rem;font-size:1rem;color:#ccc;">${formattedTime}</div>
+                            `;
+                            summaryBox.style.display = '';
+                            document.getElementById('selected-location').style.display = 'none';
+                            document.getElementById('coordinates').style.display = 'none';
+                            document.getElementById('copy-link').disabled = false;
+                        } else {
+                            // fallback to reverse geocode if no station found
+                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    selectedLocation = {
+                                        name: data.display_name,
+                                        lat: lat,
+                                        lng: lng
+                                    };
+                                    selectedCity = null;
+                                    document.getElementById('city-select').value = '';
+                                    document.getElementById('city-weather-summary').style.display = 'none';
+                                    document.getElementById('selected-location').style.display = '';
+                                    document.getElementById('coordinates').style.display = '';
+                                    document.getElementById('selected-location').textContent = selectedLocation.name;
+                                    document.getElementById('coordinates').textContent = 
+                                        `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
+                                    document.getElementById('copy-link').disabled = false;
+                                })
+                                .catch(error => {
+                                    console.error('Error getting location name:', error);
+                                    selectedLocation = {
+                                        name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                                        lat: lat,
+                                        lng: lng
+                                    };
+                                    selectedCity = null;
+                                    document.getElementById('city-select').value = '';
+                                    document.getElementById('city-weather-summary').style.display = 'none';
+                                    document.getElementById('selected-location').style.display = '';
+                                    document.getElementById('coordinates').style.display = '';
+                                    document.getElementById('selected-location').textContent = selectedLocation.name;
+                                    document.getElementById('coordinates').textContent = 
+                                        `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
+                                    document.getElementById('copy-link').disabled = false;
+                                });
+                        }
                     });
             });
         }
 
-        // Initialize map when page loads
-        document.addEventListener('DOMContentLoaded', initMap);
-
         // Copy link to clipboard
         document.getElementById('copy-link').addEventListener('click', () => {
-            if (selectedLocation) {
-                // Get the current base URL and remove any trailing slashes
-                const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
-                const weatherLink = `${baseUrl}?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
-                
-                navigator.clipboard.writeText(weatherLink).then(() => {
-                    const button = document.getElementById('copy-link');
-                    button.textContent = 'Link Copied!';
-                    setTimeout(() => {
-                        button.textContent = 'Copy Weather Link';
-                    }, 2000);
-                });
+            const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
+            let weatherLink = '';
+            if (selectedCity) {
+                weatherLink = `${baseUrl}?city=${encodeURIComponent(selectedCity.name)}`;
+            } else if (selectedLocation) {
+                weatherLink = `${baseUrl}?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
+            } else {
+                return;
             }
+            navigator.clipboard.writeText(weatherLink).then(() => {
+                const button = document.getElementById('copy-link');
+                button.textContent = 'Link Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy Weather Link';
+                }, 2000);
+            });
         });
     </script>
 </body>

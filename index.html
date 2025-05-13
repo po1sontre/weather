@@ -5,13 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Südtirol Weather</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 </head>
 <body>
+    <div class="language-switcher">
+        <button onclick="changeLanguage('en')" class="lang-btn">EN</button>
+        <button onclick="changeLanguage('de')" class="lang-btn">DE</button>
+        <button onclick="changeLanguage('it')" class="lang-btn">IT</button>
+    </div>
+    
     <div class="weather-container">
         <div id="weather-content">
-            <div class="loading">Loading weather data...</div>
+            <div class="location-header">
+                <h1 class="location"></h1>
+                <div class="current-time"></div>
+            </div>
+            <div class="current-weather">
+                <div class="weather-main-info">
+                    <div class="temperature"></div>
+                    <div class="weather-details">
+                        <span class="humidity"></span>
+                        <span class="wind"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="forecast-container"></div>
+            <div class="ad-banner">Your Ad Here</div>
         </div>
     </div>
+    <div class="ad-banner-full">Your Big Ad Here</div>
     <script src="app.js"></script>
 </body>
 </html> 
