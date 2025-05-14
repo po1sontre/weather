@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Südtirol Weather</title>
+    <title>Weather App</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 </head>
 <body>
@@ -17,24 +16,40 @@
     
     <div class="weather-container">
         <div id="weather-content">
-            <div class="location-header">
-                <h1 class="location"></h1>
-                <div class="current-time"></div>
+            <div class="weather-header">
+                <h1 class="location">New York City</h1>
+                <div class="temperature">24°C</div>
             </div>
+            
+            <div class="location-header">
+                <div class="current-time">Monday, June 10 • 11:45 AM</div>
+            </div>
+            
+            <!-- District info will be inserted here by JavaScript -->
+            
             <div class="current-weather">
+                <div class="weather-icon">
+                    <i class="fas fa-cloud-sun"></i>
+                </div>
+                <div class="description">Partly Cloudy</div>
                 <div class="weather-main-info">
-                    <div class="temperature"></div>
                     <div class="weather-details">
-                        <span class="humidity"></span>
-                        <span class="wind"></span>
+                        <span class="humidity"><i class="fas fa-tint"></i> Humidity: 65%</span>
+                        <span class="wind"><i class="fas fa-wind"></i> Wind: 12 km/h</span>
                     </div>
                 </div>
             </div>
-            <div class="forecast-container"></div>
+            
+            <div class="forecast-container">
+                <!-- Forecast days will be inserted here by JavaScript -->
+            </div>
+            
             <div class="ad-banner">Your Ad Here</div>
         </div>
     </div>
+    
     <div class="ad-banner-full">Your Big Ad Here</div>
+    
     <script src="app.js"></script>
 </body>
-</html> 
+</html>

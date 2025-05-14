@@ -571,7 +571,7 @@ function updateCurrentTime() {
     const timeElem = document.querySelector('.current-time');
     if (timeElem) {
         const now = new Date();
-        timeElem.textContent = `Current time: ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        timeElem.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 }
 
