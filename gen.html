@@ -454,7 +454,8 @@
             if (!selectedCity) return;
             
             const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
-            const weatherLink = `${baseUrl}?city=${encodeURIComponent(selectedCity.cleanName)}&district=${selectedCity.district.id}`;
+            // Point to index.html for the main weather page
+            const weatherLink = `${baseUrl}/index.html?city=${encodeURIComponent(selectedCity.cleanName)}&district=${selectedCity.district.id}`;
             
             navigator.clipboard.writeText(weatherLink).then(() => {
                 const button = document.getElementById('copy-link');
