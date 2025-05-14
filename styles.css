@@ -627,4 +627,90 @@ body {
     font-weight: 900;
     color: var(--primary-color);
     margin-bottom: 0.5rem;
+}
+
+@media (min-width: 1800px) {
+    .weather-container, .weather-card, .generator-container {
+        max-width: 900px;
+        padding: 1.2rem 1.2rem 1rem 1.2rem;
+    }
+    .location {
+        font-size: 2.2rem;
+        letter-spacing: 0.5px;
+    }
+    .temperature {
+        font-size: 2.8rem;
+    }
+    .description {
+        font-size: 1.1rem;
+    }
+    .current-time {
+        font-size: 1.1rem;
+    }
+    .weather-icon {
+        font-size: 2.2rem;
+    }
+    .forecast-day {
+        min-width: 90px;
+        padding: 0.7rem;
+    }
+    .forecast-day .day-name {
+        font-size: 1.2rem;
+    }
+    .forecast-day .forecast-icon {
+        font-size: 2rem;
+    }
+    .forecast-day .forecast-desc {
+        font-size: 0.9rem;
+    }
+    .forecast-day .forecast-temp {
+        font-size: 1.2rem;
+    }
+    .district-info {
+        font-size: 0.9rem;
+        padding: 0.4rem;
+        margin-bottom: 0.7rem;
+    }
+    .summary {
+        font-size: 0.9rem;
+        padding: 0.7rem 0.6rem;
+        max-width: 700px;
+    }
+    .current-details {
+        gap: 1rem;
+    }
+    .current-details > div {
+        min-width: 70px;
+    }
+    .current-details i {
+        font-size: 1.1rem;
+    }
+    .current-details span {
+        font-size: 1rem;
+    }
+    .high-low {
+        gap: 1.2rem;
+        font-size: 1.2rem;
+    }
+    .sun-times {
+        gap: 1.2rem;
+        font-size: 1rem;
+    }
+    .uv-index {
+        font-size: 1rem;
+        gap: 0.5rem;
+    }
+    .uv-value {
+        font-size: 1rem;
+    }
+    .hourly-timeline {
+        gap: 1.2rem;
+    }
+    .hour-item {
+        font-size: 0.8rem;
+        min-width: 38px;
+    }
+    .hour-item i {
+        font-size: 0.8rem;
+    }
 } 
