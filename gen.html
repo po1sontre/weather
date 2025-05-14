@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate Weather Link</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         .generator-container {
             max-width: 800px;
@@ -13,116 +12,419 @@
             padding: 2rem;
         }
 
-        #map {
-            height: 400px;
-            width: 100%;
-            margin: 1rem 0;
-            border-radius: 10px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        }
-
         .location-info {
             background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            margin: 2rem 0;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.13);
+        }
+
+        .city-select-container {
+            margin-bottom: 2rem;
+        }
+
+        #city-select {
+            width: 100%;
             padding: 1rem;
-            border-radius: 10px;
-            margin: 1rem 0;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #city-select:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #city-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+        }
+
+        #city-weather-summary {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
         }
 
         .copy-link {
-            background: #4CAF50;
-            color: white;
+            background: var(--primary-color);
+            color: #000;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
+            padding: 1rem 2rem;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            margin-top: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+            width: 100%;
         }
 
         .copy-link:hover {
-            background: #45a049;
+            background: #ffd900;
+            transform: translateY(-2px);
+        }
+
+        .copy-link:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .back-link {
-            color: #ffffff;
+            color: var(--primary-color);
             text-decoration: none;
-            display: inline-block;
-            margin-bottom: 1rem;
+            display: inline-flex;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
         }
 
         .back-link:hover {
-            text-decoration: underline;
+            color: #ffd900;
+            transform: translateX(-5px);
         }
 
-        /* Leaflet dark theme overrides */
-        .leaflet-container {
-            background: #2d2d2d !important;
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
         }
 
-        .leaflet-control-zoom a {
-            background-color: #1a1a1a !important;
-            color: #ffffff !important;
-            border-color: #333 !important;
-        }
-
-        .leaflet-control-zoom a:hover {
-            background-color: #333 !important;
+        p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
         }
     </style>
 </head>
 <body>
     <div class="generator-container">
         <a href="index.html" class="back-link">← Back to Weather</a>
-        <h1>Generate Weather Link</h1>
-        <p>Click on the map to select a location and generate a weather link.</p>
-        
-        <div id="map"></div>
+        <h1>Select a City</h1>
+        <p>Choose a city from the dropdown to view its weather forecast.</p>
         
         <div class="location-info">
-            <h3>Selected Location</h3>
-            <select id="city-select">
-                <option value="">-- Select a city/station --</option>
-            </select>
+            <div class="city-select-container">
+                <select id="city-select">
+                    <option value="">-- Select a city --</option>
+                </select>
+            </div>
             <div id="city-weather-summary" style="display:none;"></div>
-            <p id="selected-location">No location selected</p>
-            <p id="coordinates"></p>
             <button class="copy-link" id="copy-link" disabled>Copy Weather Link</button>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map;
-        let marker;
-        let selectedLocation = null;
         let selectedCity = null;
         let stationsList = [];
 
+        // Function to get district for a station
+        async function getDistrictForStation(station) {
+            try {
+                // First get all districts
+                const districtsRes = await fetch('https://api-weather.services.siag.it/api/v2/district');
+                const districtsData = await districtsRes.json();
+                
+                if (!districtsData.rows || districtsData.rows.length === 0) {
+                    console.error('No districts found in API response');
+                    return null;
+                }
+
+                // Map of district names and their corresponding cities/regions
+                const districtMappings = {
+                    'Bolzano, Überetsch and Unterland': [
+                        'Bolzano/Bozen', 'Laives/Leifers', 'Bronzolo/Branzoll', 'Vadena/Pfatten',
+                        'Appiano/Eppan', 'Caldaro/Kaltern', 'Ora/Auer', 'Egna/Neumarkt',
+                        'Montagna/Montan', 'Salorno/Salurn', 'Termeno/Tramin', 'Cortaccia/Kurtatsch',
+                        'Magrè/Margreid', 'Cortina/Kurtinig', 'Nova Ponente/Deutschnofen',
+                        'Laurein/Laurein', 'Proves/Proveis', 'Senale-San Felice/Unsere Liebe Frau im Walde-St. Felix',
+                        'Andriano/Andrian', 'Terlano/Terlan', 'Nalles/Nals', 'Settequerce/Siebeneich',
+                        'San Genesio/Jenesien', 'Renon/Ritten', 'Fiè/Völs', 'Barbiano/Barbian',
+                        'Villandro/Villanders', 'Funes/Villnöß', 'Castelrotto/Kastelruth', 'Lajen/Laion',
+                        'Cornedo all\'Isarco/Karneid', 'Nova Levante/Welschnofen', 'Trodena/Truden',
+                        'Anterivo/Altrei', 'Laimburg', 'Franzensfeste', 'Radein', 'Karerpass',
+                        'Rittnerhorn', 'Seiser Alm', 'Sand in Taufers', 'Rein in Taufers',
+                        'St. Walburg', 'St. Valentin a.d. Haide', 'Taufers i.M.', 'Völs am Schlern',
+                        'S. Martin de Tor', 'Platt in Passeier', 'Ritten Siffian', 'Abtei Piz la Ila',
+                        'Deutschnofen Obereggen', 'Proveis Samerberg', 'Sand i.T. Mühlen', 'Barbian Kollmann',
+                        'Kaltern Oberplanitzing', 'Pens Tramintal', 'Seiser Alm Zallinger'
+                    ],
+                    'Burggrafenamt - Meran and surroundings': [
+                        'Merano/Meran', 'Lagundo/Algund', 'Rifiano/Riffian', 'San Martino in Passiria/St. Martin in Passeier',
+                        'San Leonardo in Passiria/St. Leonhard in Passeir', 'Scena/Schenna', 'Tirolo/Tirol',
+                        'Caines/Kuens', 'Racines/Ratschings', 'Marlengo/Marling', 'Lana/Lana',
+                        'Cermes/Tscherms', 'Postal/Burgstall', 'Naturno/Naturns', 'Parines/Partschins',
+                        'Plaus/Plaus', 'Rablà/Rabland', 'Saltusio/Salzburg', 'San Pancrazio/St. Pankraz',
+                        'Tesimo/Tisens', 'Gargazzone/Gargazon', 'Velturno/Feldthurns', 'Varna/Vahrn',
+                        'Gargazon', 'Ratschings Wasserfaller Alm', 'Naturns', 'Ulten', 'Ulten Rossbänke',
+                        'Ulten Weißbrunnspitz', 'St. Martin in Passeier'
+                    ],
+                    'Vinschgau': [
+                        'Silandro/Schlanders', 'Lasa/Laas', 'Malles Venosta/Mals', 'Curon Venosta/Graun im Vinschgau',
+                        'Sluderno/Schluderns', 'Glorenza/Glurns', 'Prato allo Stelvio/Prad am Stilfserjoch',
+                        'Stelvio/Stilfs', 'Laces/Latsch', 'Castelbello-Ciardes/Kastelbell-Tschars',
+                        'Senales/Schnals', 'Naturno/Naturns (upper part)', 'Val Venosta/Vinschgau valley municipalities',
+                        'Schlanders', 'Laas Eyrs', 'Graun Schöneben', 'Graun Elferspitze', 'Sulden',
+                        'Sulden Schöntaufspitze', 'Sulden Madritsch', 'Timmelsalm', 'Trafoi Zaufenkofel',
+                        'Schnals Grawand', 'Langtaufers Grub'
+                    ],
+                    'Eisacktal and Sarntal': [
+                        'Bressanone/Brixen', 'Chiusa/Klausen', 'Varna/Vahrn', 'Velturno/Feldthurns',
+                        'Naz-Sciaves/Natz-Schabs', 'Luson/Lüsen', 'Funes/Villnöß', 'San Martino in Badia/St. Martin in Thurn',
+                        'San Pietro/St. Peter', 'Santa Cristina Valgardena/St. Christina in Gröden',
+                        'Selva di Val Gardena/Wolkenstein in Gröden', 'Ortisei/St. Ulrich in Gröden',
+                        'La Valle/Wengen', 'Badia/Abtei', 'Corvara in Badia/Corvara', 'Valdaora/Olang',
+                        'Marebbe/Enneberg', 'San Lorenzo/St. Lorenzen', 'Rodengo/Rodeneck',
+                        'Rio di Pusteria/Mühlbach', 'Vandoies/Vintl', 'Terento/Terenten',
+                        'Gais/Gais', 'Brunico/Bruneck', 'Rasun Anterselva/Rasen-Antholz',
+                        'Brixen', 'Bruneck', 'Terenten', 'Corvara', 'Abtei Piz Pisciadù',
+                        'Sarnthein', 'Villnöß', 'Villnöss', 'Plose', 'Campill Kreuzkofeljoch', 'Schleis Kloangruebes',
+                        'Antholz Obertal', 'Obervintl'
+                    ],
+                    'Wipptal - Sterzing and surroundings': [
+                        'Vipiteno/Sterzing', 'Racines/Ratschings', 'Giovo/Jaufen', 'Moso in Passiria/Moos in Passeier',
+                        'Pfunders/Pfunders', 'Campo di Trens/Freienfeld', 'Val di Vizze/Pfitsch',
+                        'Brennero/Brenner', 'Fleres/Pflersch', 'Colle Isarco/Gossensaß',
+                        'Sterzing', 'Pfitsch St. Jakob', 'Pfunders', 'Pflersch', 'Pfunders Dannelspitz',
+                        'Pfunders Stutzenalm', 'Jaufenkamm', 'Signalgipfel Wilder Freiger', 'Ladurns'
+                    ],
+                    'Pustertal': [
+                        'Brunico/Bruneck', 'Valdaora/Olang', 'Rasun Anterselva/Rasen-Antholz',
+                        'San Candido/Innichen', 'Sesto/Sexten', 'Dobbiaco/Toblach', 'Villabassa/Niederdorf',
+                        'Braies/Prags', 'Monguelfo/Welsberg', 'Valle di Casies/Gsies',
+                        'Marebbe/Enneberg', 'San Vigilio di Marebbe/St. Vigil in Enneberg',
+                        'La Valle/Wengen', 'Badia/Abtei', 'Corvara in Badia/Corvara',
+                        'Toblach', 'Welsberg', 'Hintermartell', 'St. Magdalena in Gsies',
+                        'Gsies Pfinnalm', 'Gsies Regelspitze', 'Prettau', 'Prettau Lengspitze',
+                        'Prettau Merbalm', 'Pfelders', 'Pfelders Rauhjoch', 'Pfelders Grünboden',
+                        'Toblach Hochebenkofel', 'Prags Rossalm', 'Weissenbach Fadner Alm'
+                    ],
+                    'Ladinia - Dolomites': [
+                        'Corvara in Badia/Corvara', 'Badia/Abtei', 'La Valle/Wengen',
+                        'San Martino in Badia/St. Martin in Thurn', 'Marebbe/Enneberg',
+                        'San Vigilio di Marebbe/St. Vigil in Enneberg', 'Santa Cristina Valgardena/St. Christina in Gröden',
+                        'Selva di Val Gardena/Wolkenstein in Gröden', 'Ortisei/St. Ulrich in Gröden',
+                        'San Pietro/St. Peter', 'San Genesio/Jenesien', 'Fiè/Völs',
+                        'Castelrotto/Kastelruth', 'Siusi allo Sciliar/Seis am Schlern',
+                        'Tires/Tiers', 'Nova Levante/Welschnofen', 'Nova Ponente/Deutschnofen',
+                        'Vals', 'Melag Pratznerberg'
+                    ]
+                };
+
+                // Clean the station name
+                const stationName = cleanStationName(station.name).toLowerCase()
+                    .replace('ö', 'oe')  // Handle German umlauts
+                    .replace('ä', 'ae')
+                    .replace('ü', 'ue');
+                
+                // Find the district that contains this station's name or region
+                for (const [districtName, cities] of Object.entries(districtMappings)) {
+                    const district = districtsData.rows.find(d => d.name === districtName);
+                    if (!district) continue;
+
+                    // Check if the station name contains any of the cities in this district
+                    if (cities.some(city => {
+                        const cityNames = city.toLowerCase()
+                            .replace('ö', 'oe')  // Handle German umlauts
+                            .replace('ä', 'ae')
+                            .replace('ü', 'ue')
+                            .split('/');
+                        return cityNames.some(name => {
+                            // For mountain stations, check if the station name starts with the city name
+                            if (stationName.includes('spitze') || stationName.includes('alm') || 
+                                stationName.includes('horn') || stationName.includes('pass')) {
+                                return stationName.startsWith(name);
+                            }
+                            return stationName.includes(name);
+                        });
+                    })) {
+                        console.log(`Station ${station.name} mapped to district ${districtName}`);
+                        return district;
+                    }
+                }
+
+                // If no direct match found, try to find the district based on the station's name
+                const stationWords = stationName.split(' ');
+                for (const [districtName, cities] of Object.entries(districtMappings)) {
+                    const district = districtsData.rows.find(d => d.name === districtName);
+                    if (!district) continue;
+
+                    // Check if any word in the station name matches any city in this district
+                    if (stationWords.some(word => {
+                        return cities.some(city => {
+                            const cityNames = city.toLowerCase()
+                                .replace('ö', 'oe')  // Handle German umlauts
+                                .replace('ä', 'ae')
+                                .replace('ü', 'ue')
+                                .split('/');
+                            return cityNames.some(name => name.includes(word));
+                        });
+                    })) {
+                        console.log(`Station ${station.name} mapped to district ${districtName} based on partial match`);
+                        return district;
+                    }
+                }
+
+                // If still no match found, use the first district as fallback
+                console.log(`No district match found for ${station.name}, using default district`);
+                return districtsData.rows[0];
+            } catch (error) {
+                console.error('Error getting district for station:', error);
+                return null;
+            }
+        }
+
+        // Function to check if a station has valid weather data
+        function isValidStation(station) {
+            if (!station || !station.name) {
+                console.log('Invalid station or name:', station);
+                return false;
+            }
+            
+            // Convert values to numbers and check if they're valid
+            const temp = parseFloat(station.t);
+            const humidity = parseFloat(station.rh);
+            const windSpeed = parseFloat(station.ff);
+            
+            // Check if temperature is a valid number
+            if (isNaN(temp)) {
+                console.log('Invalid temperature for', station.name, ':', station.t);
+                return false;
+            }
+            
+            // Check if humidity is a valid number between 0 and 100
+            if (isNaN(humidity) || humidity < 0 || humidity > 100) {
+                console.log('Invalid humidity for', station.name, ':', station.rh);
+                return false;
+            }
+            
+            // Check if wind speed is a valid number
+            if (isNaN(windSpeed)) {
+                console.log('Invalid wind speed for', station.name, ':', station.ff);
+                return false;
+            }
+            
+            // Check if coordinates are valid
+            const lat = parseFloat(station.latitude?.replace(',', '.'));
+            const lon = parseFloat(station.longitude?.replace(',', '.'));
+            if (isNaN(lat) || isNaN(lon)) {
+                console.log('Invalid coordinates for', station.name, ':', station.latitude, station.longitude);
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Function to clean station name
+        function cleanStationName(name) {
+            if (!name) return '';
+            // Remove any district/region information after comma
+            let cleanName = name.split(',')[0];
+            // Remove any postal code
+            cleanName = cleanName.replace(/\d{5}/, '').trim();
+            // Remove any special characters or extra spaces
+            cleanName = cleanName.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ').trim();
+            return cleanName;
+        }
+
         // Fetch SIAG stations and populate dropdown
-        function fetchStations() {
-            fetch('https://weather.services.siag.it/api/v2/station/')
-                .then(res => res.json())
-                .then(data => {
-                    stationsList = data.rows;
-                    const select = document.getElementById('city-select');
-                    data.rows.forEach(station => {
-                        const opt = document.createElement('option');
-                        opt.value = station.name;
-                        opt.textContent = station.name;
-                        select.appendChild(opt);
-                    });
+        async function fetchStations() {
+            try {
+                const response = await fetch('https://api-weather.services.siag.it/api/v2/station/');
+                const data = await response.json();
+                console.log('Total stations received:', data.rows.length);
+                
+                // Filter and sort stations
+                const validStations = data.rows.filter(isValidStation);
+                console.log('Valid stations after filtering:', validStations.length);
+
+                // Get districts for all valid stations
+                const stationsWithDistricts = await Promise.all(
+                    validStations.map(async (station) => {
+                        const district = await getDistrictForStation(station);
+                        return {
+                            ...station,
+                            cleanName: cleanStationName(station.name),
+                            district: district
+                        };
+                    })
+                );
+
+                // Sort by district name and then by station name
+                stationsList = stationsWithDistricts.sort((a, b) => {
+                    if (a.district.name !== b.district.name) {
+                        return a.district.name.localeCompare(b.district.name);
+                    }
+                    return a.cleanName.localeCompare(b.cleanName);
                 });
+
+                // Remove duplicates
+                const uniqueStations = stationsList.reduce((acc, current) => {
+                    const x = acc.find(item => item.cleanName === current.cleanName);
+                    if (!x) {
+                        return acc.concat([current]);
+                    }
+                    return acc;
+                }, []);
+
+                console.log('Unique stations after deduplication:', uniqueStations.length);
+
+                const select = document.getElementById('city-select');
+                select.innerHTML = '<option value="">-- Select a city --</option>';
+                
+                // Group stations by district
+                const stationsByDistrict = uniqueStations.reduce((acc, station) => {
+                    const districtName = station.district.name;
+                    if (!acc[districtName]) {
+                        acc[districtName] = [];
+                    }
+                    acc[districtName].push(station);
+                    return acc;
+                }, {});
+
+                // Add stations to dropdown, grouped by district
+                Object.entries(stationsByDistrict).forEach(([districtName, stations]) => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = districtName;
+                    
+                    stations.forEach(station => {
+                        const opt = document.createElement('option');
+                        opt.value = station.cleanName;
+                        opt.textContent = station.cleanName;
+                        opt.dataset.districtId = station.district.id;
+                        optgroup.appendChild(opt);
+                    });
+                    
+                    select.appendChild(optgroup);
+                });
+            } catch (error) {
+                console.error('Error fetching stations:', error);
+            }
         }
 
         // Handle city selection
         document.addEventListener('DOMContentLoaded', () => {
             fetchStations();
-            initMap();
+            
             document.getElementById('city-select').addEventListener('change', (e) => {
                 const cityName = e.target.value;
-                selectedCity = stationsList.find(s => s.name === cityName);
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const districtId = selectedOption.dataset.districtId;
+                
+                selectedCity = stationsList.find(s => s.cleanName === cityName);
                 const summaryBox = document.getElementById('city-weather-summary');
-                if (selectedCity) {
+                
+                if (selectedCity && isValidStation(selectedCity)) {
                     // Format last updated time
                     let lastUpdated = selectedCity.lastUpdated;
                     let formattedTime = '';
@@ -130,122 +432,30 @@
                         const d = new Date(lastUpdated.replace('T', ' '));
                         formattedTime = `Last updated: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString()}`;
                     }
+                    
                     summaryBox.innerHTML = `
-                        <div style="font-size:1.5rem;font-weight:700;">${selectedCity.name}</div>
-                        <div style="font-size:2.2rem;margin:0.5rem 0;">${selectedCity.t ? selectedCity.t + '°C' : '--'}</div>
-                        <div>Humidity: <b>${selectedCity.rh ? selectedCity.rh + '%' : '--'}</b></div>
-                        <div>Wind: <b>${selectedCity.ff ? selectedCity.ff + ' km/h' : '--'} ${selectedCity.dd || ''}</b></div>
+                        <div style="font-size:1.5rem;font-weight:700;">${selectedCity.cleanName}</div>
+                        <div style="font-size:2.2rem;margin:0.5rem 0;color:var(--primary-color);">${Math.round(selectedCity.t)}°C</div>
+                        <div>Humidity: <b>${Math.round(selectedCity.rh)}%</b></div>
+                        <div>Wind: <b>${Math.round(selectedCity.ff)} km/h ${selectedCity.dd || ''}</b></div>
                         <div style="margin-top:0.5rem;font-size:1rem;color:#ccc;">${formattedTime}</div>
                     `;
                     summaryBox.style.display = '';
-                    document.getElementById('selected-location').style.display = 'none';
-                    document.getElementById('coordinates').style.display = 'none';
                     document.getElementById('copy-link').disabled = false;
                 } else {
                     summaryBox.style.display = 'none';
-                    document.getElementById('selected-location').style.display = '';
-                    document.getElementById('coordinates').style.display = '';
-                    document.getElementById('selected-location').textContent = 'No location selected';
-                    document.getElementById('coordinates').textContent = '';
                     document.getElementById('copy-link').disabled = true;
                 }
             });
         });
 
-        // Initialize map
-        function initMap() {
-            map = L.map('map').setView([46.4983, 11.3548], 8);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            map.on('click', (event) => {
-                const lat = event.latlng.lat;
-                const lng = event.latlng.lng;
-                if (marker) {
-                    marker.setLatLng(event.latlng);
-                } else {
-                    marker = L.marker(event.latlng).addTo(map);
-                }
-                // Try to fetch nearest station
-                fetch(`https://weather.services.siag.it/api/v2/station?longitude=${lng}&latitude=${lat}&numStations=1&visibility=1`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.rows && data.rows.length > 0) {
-                            selectedCity = data.rows[0];
-                            selectedLocation = null;
-                            document.getElementById('city-select').value = '';
-                            // Format last updated time
-                            let lastUpdated = selectedCity.lastUpdated;
-                            let formattedTime = '';
-                            if (lastUpdated) {
-                                const d = new Date(lastUpdated.replace('T', ' '));
-                                formattedTime = `Last updated: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString()}`;
-                            }
-                            const summaryBox = document.getElementById('city-weather-summary');
-                            summaryBox.innerHTML = `
-                                <div style="font-size:1.5rem;font-weight:700;">${selectedCity.name}</div>
-                                <div style="font-size:2.2rem;margin:0.5rem 0;">${selectedCity.t ? selectedCity.t + '°C' : '--'}</div>
-                                <div>Humidity: <b>${selectedCity.rh ? selectedCity.rh + '%' : '--'}</b></div>
-                                <div>Wind: <b>${selectedCity.ff ? selectedCity.ff + ' km/h' : '--'} ${selectedCity.dd || ''}</b></div>
-                                <div style="margin-top:0.5rem;font-size:1rem;color:#ccc;">${formattedTime}</div>
-                            `;
-                            summaryBox.style.display = '';
-                            document.getElementById('selected-location').style.display = 'none';
-                            document.getElementById('coordinates').style.display = 'none';
-                            document.getElementById('copy-link').disabled = false;
-                        } else {
-                            // fallback to reverse geocode if no station found
-                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
-                                .then(response => response.json())
-                                .then(data => {
-                                    selectedLocation = {
-                                        name: data.display_name,
-                                        lat: lat,
-                                        lng: lng
-                                    };
-                                    selectedCity = null;
-                                    document.getElementById('city-select').value = '';
-                                    document.getElementById('city-weather-summary').style.display = 'none';
-                                    document.getElementById('selected-location').style.display = '';
-                                    document.getElementById('coordinates').style.display = '';
-                                    document.getElementById('selected-location').textContent = selectedLocation.name;
-                                    document.getElementById('coordinates').textContent = 
-                                        `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
-                                    document.getElementById('copy-link').disabled = false;
-                                })
-                                .catch(error => {
-                                    console.error('Error getting location name:', error);
-                                    selectedLocation = {
-                                        name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                                        lat: lat,
-                                        lng: lng
-                                    };
-                                    selectedCity = null;
-                                    document.getElementById('city-select').value = '';
-                                    document.getElementById('city-weather-summary').style.display = 'none';
-                                    document.getElementById('selected-location').style.display = '';
-                                    document.getElementById('coordinates').style.display = '';
-                                    document.getElementById('selected-location').textContent = selectedLocation.name;
-                                    document.getElementById('coordinates').textContent = 
-                                        `Latitude: ${lat.toFixed(4)}, Longitude: ${lng.toFixed(4)}`;
-                                    document.getElementById('copy-link').disabled = false;
-                                });
-                        }
-                    });
-            });
-        }
-
         // Copy link to clipboard
         document.getElementById('copy-link').addEventListener('click', () => {
+            if (!selectedCity) return;
+            
             const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
-            let weatherLink = '';
-            if (selectedCity) {
-                weatherLink = `${baseUrl}?city=${encodeURIComponent(selectedCity.name)}`;
-            } else if (selectedLocation) {
-                weatherLink = `${baseUrl}?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`;
-            } else {
-                return;
-            }
+            const weatherLink = `${baseUrl}?city=${encodeURIComponent(selectedCity.cleanName)}&district=${selectedCity.district.id}`;
+            
             navigator.clipboard.writeText(weatherLink).then(() => {
                 const button = document.getElementById('copy-link');
                 button.textContent = 'Link Copied!';

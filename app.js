@@ -24,7 +24,8 @@ const TRANSLATIONS = {
         airQuality: 'Air Quality',
         moonPhase: 'Moon Phase',
         loading: 'Loading weather data...',
-        error: 'Error fetching weather data. Please try again later.'
+        error: 'Error fetching weather data. Please try again later.',
+        districtForecast: 'District Forecast'
     },
     de: {
         feelsLike: 'Gefühlt',
@@ -42,7 +43,8 @@ const TRANSLATIONS = {
         airQuality: 'Luftqualität',
         moonPhase: 'Mondphase',
         loading: 'Wetterdaten werden geladen...',
-        error: 'Fehler beim Laden der Wetterdaten. Bitte versuchen Sie es später erneut.'
+        error: 'Fehler beim Laden der Wetterdaten. Bitte versuchen Sie es später erneut.',
+        districtForecast: 'Bezirksvorhersage'
     },
     it: {
         feelsLike: 'Percepita',
@@ -60,12 +62,82 @@ const TRANSLATIONS = {
         airQuality: 'Qualità dell\'aria',
         moonPhase: 'Fase lunare',
         loading: 'Caricamento dati meteo...',
-        error: 'Errore nel recupero dei dati meteo. Riprova più tardi.'
+        error: 'Errore nel recupero dei dati meteo. Riprova più tardi.',
+        districtForecast: 'Previsione del distretto'
     }
 };
 
 // Current language
 let currentLang = 'en';
+
+// Function to get district ID for a city
+async function getDistrictIdForCity(cityName) {
+    try {
+        // First, get all districts
+        const districtsRes = await fetch('https://api-weather.services.siag.it/api/v2/district');
+        const districtsData = await districtsRes.json();
+        
+        // Then, get all stations to map cities to districts
+        const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
+        const stationsData = await stationsRes.json();
+        
+        // Find the station that matches our city name
+        const normalizedCityName = cityName.toLowerCase().trim();
+        const matchingStation = stationsData.rows.find(station => 
+            station.name.toLowerCase().includes(normalizedCityName)
+        );
+        
+        if (matchingStation) {
+            // Find the district that contains this station's coordinates
+            const stationLat = matchingStation.latitude;
+            const stationLon = matchingStation.longitude;
+            
+            // For each district, check if the station is within its bounds
+            // For now, we'll use a simple approach: find the district with the closest center
+            let closestDistrict = null;
+            let minDistance = Infinity;
+            
+            for (const district of districtsData.rows) {
+                // Get the district's bulletin to check its area
+                const districtRes = await fetch(`https://api-weather.services.siag.it/api/v2/district/${district.id}/bulletin`);
+                const districtData = await districtRes.json();
+                
+                if (districtData.district) {
+                    // Calculate distance between station and district center
+                    // This is a simplified approach - in reality, you'd want to check if the point is within the district's polygon
+                    const distance = Math.sqrt(
+                        Math.pow(stationLat - districtData.district.latitude, 2) +
+                        Math.pow(stationLon - districtData.district.longitude, 2)
+                    );
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestDistrict = district;
+                    }
+                }
+            }
+            
+            return closestDistrict ? closestDistrict.id : 1; // Default to Bolzano district if no match found
+        }
+        
+        return 1; // Default to Bolzano district if no match found
+    } catch (error) {
+        console.error('Error getting district for city:', error);
+        return 1; // Default to Bolzano district on error
+    }
+}
+
+// Function to get district name by ID
+async function getDistrictNameById(districtId) {
+    try {
+        const response = await fetch(`https://api-weather.services.siag.it/api/v2/district/${districtId}/bulletin`);
+        const data = await response.json();
+        return data.district?.name || 'Unknown District';
+    } catch (error) {
+        console.error('Error getting district name:', error);
+        return 'Unknown District';
+    }
+}
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -294,6 +366,7 @@ async function fetchWeatherData() {
         const lang = ['de', 'it', 'en'].includes(langParam) ? langParam : 'de';
         currentLang = lang;
         document.documentElement.lang = lang;
+        
         // Highlight active language button
         document.querySelectorAll('.lang-btn').forEach(btn => {
             btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
@@ -305,48 +378,66 @@ async function fetchWeatherData() {
         const latParam = getUrlParameter('lat');
         const lngParam = getUrlParameter('lng');
         let foundStation = null;
+        let districtId = 1; // Default to Bolzano district
+
         if (stationParam || cityParam) {
             // Fetch stations list
-            const stationsRes = await fetch('https://weather.services.siag.it/api/v2/station/');
+            const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
             const stationsData = await stationsRes.json();
             if (stationParam) {
                 foundStation = stationsData.rows.find(s => s.code.toLowerCase() === stationParam.toLowerCase());
             } else if (cityParam) {
                 foundStation = stationsData.rows.find(s => s.name.toLowerCase() === cityParam.toLowerCase());
+                // Get district ID for the city
+                districtId = await getDistrictIdForCity(cityParam);
             }
             if (foundStation) {
                 displayStationWeather(foundStation);
             }
         } else if (latParam && lngParam) {
             // Fetch nearest station by lat/lng
-            const stationsRes = await fetch(`https://weather.services.siag.it/api/v2/station?longitude=${lngParam}&latitude=${latParam}&numStations=1&visibility=1`);
+            const stationsRes = await fetch(`https://api-weather.services.siag.it/api/v2/station?longitude=${lngParam}&latitude=${latParam}&numStations=1&visibility=1`);
             const stationsData = await stationsRes.json();
             if (stationsData.rows && stationsData.rows.length > 0) {
                 foundStation = stationsData.rows[0];
                 displayStationWeather(foundStation);
             }
         }
-        // Show forecast for the next 3 days
+
+        // Show forecast for the district
         const forecastElem = document.querySelector('.forecast-container');
-        if (forecastElem) forecastElem.innerHTML = '';
-        const forecastRes = await fetch(`https://api-weather.services.siag.it/api/v2/bulletinHD?format=json&lang=${lang}`);
+        if (forecastElem) {
+            forecastElem.innerHTML = '';
+            // Add district information ABOVE the forecast container
+            let districtInfo = document.querySelector('.district-info');
+            const districtName = await getDistrictNameById(districtId);
+            if (!districtInfo) {
+                districtInfo = document.createElement('div');
+                districtInfo.className = 'district-info';
+                forecastElem.parentElement.insertBefore(districtInfo, forecastElem);
+            }
+            districtInfo.textContent = `${TRANSLATIONS[currentLang].districtForecast}: ${districtName}`;
+        }
+
+        const forecastRes = await fetch(`https://api-weather.services.siag.it/api/v2/district/${districtId}/bulletin?format=json&lang=${lang}`);
         const forecastData = await forecastRes.json();
-        if (forecastData.dayForecasts && forecastElem) {
-            for (let i = 0; i < forecastData.dayForecasts.length; i++) {
-                const day = forecastData.dayForecasts[i];
+        
+        if (forecastData.forecasts && forecastElem) {
+            for (let i = 0; i < forecastData.forecasts.length; i++) {
+                const day = forecastData.forecasts[i];
                 const date = new Date(day.date);
                 const dayName = date.toLocaleDateString(lang, { weekday: 'short' });
                 const code = day.symbol?.code;
                 const desc = day.symbol?.description || '';
-                const tempMax = day.tempMax?.max;
-                const tempMin = day.tempMin?.min;
+                const tempMax = day.temperatureMax;
+                const tempMin = day.temperatureMin;
                 const iconClass = getForecastIconClass(code, desc);
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'forecast-day';
                 dayDiv.innerHTML = `
                     <div class="day-name">${dayName}</div>
                     <i class="forecast-icon ${iconClass}"></i>
-                    <div class="forecast-temp">${tempMin !== undefined ? tempMin + '°' : ''} / ${tempMax !== undefined ? tempMax + '°' : ''}</div>
+                    <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
                     <div class="forecast-desc">${desc}</div>
                 `;
                 forecastElem.appendChild(dayDiv);
@@ -371,27 +462,107 @@ async function fetchWeatherData() {
     }
 }
 
+// Function to check if a station has valid weather data
+function isValidStation(station) {
+    return station && 
+           station.name && 
+           station.t !== undefined && 
+           station.rh !== undefined && 
+           station.ff !== undefined;
+}
+
+// Function to clean station name
+function cleanStationName(name) {
+    // Remove any district/region information after comma
+    let cleanName = name.split(',')[0];
+    // Remove any postal code
+    cleanName = cleanName.replace(/\d{5}/, '').trim();
+    // Remove any special characters or extra spaces
+    cleanName = cleanName.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ').trim();
+    return cleanName;
+}
+
+// Function to populate the city dropdown
+async function populateCityDropdown() {
+    try {
+        const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
+        const stationsData = await stationsRes.json();
+        
+        // Filter and sort stations
+        const validStations = stationsData.rows
+            .filter(isValidStation)
+            .map(station => ({
+                ...station,
+                cleanName: cleanStationName(station.name)
+            }))
+            .sort((a, b) => a.cleanName.localeCompare(b.cleanName));
+
+        // Remove duplicates (same clean name)
+        const uniqueStations = validStations.reduce((acc, current) => {
+            const x = acc.find(item => item.cleanName === current.cleanName);
+            if (!x) {
+                return acc.concat([current]);
+            } else {
+                return acc;
+            }
+        }, []);
+
+        // Update the dropdown
+        const citySelect = document.getElementById('city-select');
+        if (citySelect) {
+            citySelect.innerHTML = '<option value="">Select a city</option>';
+            uniqueStations.forEach(station => {
+                const option = document.createElement('option');
+                option.value = station.cleanName;
+                option.textContent = station.cleanName;
+                citySelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error populating city dropdown:', error);
+    }
+}
+
+// Update the displayStationWeather function to handle missing data
 function displayStationWeather(station) {
+    if (!isValidStation(station)) {
+        displayError(TRANSLATIONS[currentLang]?.error || 'Invalid station data');
+        return;
+    }
+
     // Location
     const locElem = document.querySelector('.location');
-    if (locElem) locElem.textContent = station.name || 'Station';
+    if (locElem) locElem.textContent = cleanStationName(station.name);
+
     // Temperature
     const tempElem = document.querySelector('.temperature');
-    if (tempElem) tempElem.textContent = station.t ? `${station.t}°C` : '--';
+    if (tempElem) tempElem.textContent = `${Math.round(station.t)}°C`;
+
     // Humidity
     const humidityElem = document.querySelector('.humidity');
-    if (humidityElem) humidityElem.textContent = station.rh ? `Humidity: ${station.rh}%` : '';
+    if (humidityElem) humidityElem.textContent = station.rh ? `Humidity: ${Math.round(station.rh)}%` : '';
+
     // Wind
     const windElem = document.querySelector('.wind');
-    if (windElem) windElem.textContent = station.ff ? `Wind: ${station.ff} km/h ${station.dd || ''}` : '';
-    // Summary/description (not available for station, so leave blank)
+    if (windElem) {
+        const windText = station.ff ? 
+            `Wind: ${Math.round(station.ff)} km/h ${station.dd || ''}` : 
+            '';
+        windElem.textContent = windText;
+    }
+
+    // Summary/description
     const summaryElem = document.querySelector('.summary');
     if (summaryElem) summaryElem.textContent = '';
+
     updateCurrentTime();
 }
 
-// Initialize the weather display when the page loads
-document.addEventListener('DOMContentLoaded', fetchWeatherData);
+// Call populateCityDropdown when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    populateCityDropdown();
+    fetchWeatherData();
+});
 
 // Auto-refresh every 15 minutes
 setInterval(fetchWeatherData, 15 * 60 * 1000);
