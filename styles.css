@@ -128,22 +128,9 @@ body {
   border: 1px solid var(--primary-light);
 }
 
+/* Remove the shimmer animation */
 .district-info::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+  display: none;
 }
 
 /* Weather Header */
@@ -350,16 +337,9 @@ body {
   overflow: hidden;
 }
 
+/* Remove shimmer animation from ad banner */
 .ad-banner::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 3s infinite;
+  display: none;
 }
 
 .ad-banner-full {
@@ -378,17 +358,9 @@ body {
   overflow: hidden;
 }
 
+/* Remove shimmer animation from full ad banner */
 .ad-banner-full::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 3s infinite;
-  animation-delay: 1s;
+  display: none;
 }
 
 /* Responsive Design */
@@ -594,7 +566,7 @@ body {
   backdrop-filter: var(--glass-effect);
 }
 
-/* Animation for weather elements */
+/* Remove animation for weather elements */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -607,24 +579,20 @@ body {
 }
 
 .weather-container > * {
-  animation: fadeIn 0.5s ease-out forwards;
+  /* Remove animation */
+  animation: none;
 }
 
-.weather-container > *:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.weather-container > *:nth-child(3) {
-  animation-delay: 0.2s;
-}
-
+.weather-container > *:nth-child(2),
+.weather-container > *:nth-child(3),
 .weather-container > *:nth-child(4) {
-  animation-delay: 0.3s;
+  /* Remove animation delays */
+  animation: none;
 }
 
 .forecast-day {
-  animation: fadeIn 0.5s ease-out forwards;
-  animation-delay: calc(0.1s * var(--i, 0));
+  /* Remove animation */
+  animation: none;
 }
 
 .top-bar-time {
@@ -672,6 +640,7 @@ body {
   border-radius: 50%;
   position: absolute;
   box-shadow: 0 8px 10px rgba(0, 0, 0, 0.1);
+  animation: none; /* Disable animations */
 }
 
 .cloud::before,
@@ -688,7 +657,7 @@ body {
   top: 15%;
   left: -10%;
   opacity: 0.8;
-  animation: cloud-move-1 60s linear infinite;
+  animation: none; /* Disable animation */
 }
 
 .cloud-1::before {
@@ -711,7 +680,7 @@ body {
   top: 30%;
   left: -15%;
   opacity: 0.6;
-  animation: cloud-move-2 85s linear infinite;
+  animation: none; /* Disable animation */
 }
 
 .cloud-2::before {
@@ -734,7 +703,7 @@ body {
   top: 50%;
   left: -20%;
   opacity: 0.7;
-  animation: cloud-move-3 110s linear infinite;
+  animation: none; /* Disable animation */
 }
 
 .cloud-3::before {
@@ -757,7 +726,7 @@ body {
   top: 65%;
   left: -10%;
   opacity: 0.5;
-  animation: cloud-move-4 75s linear infinite;
+  animation: none; /* Disable animation */
 }
 
 .cloud-4::before {
@@ -780,7 +749,7 @@ body {
   top: 80%;
   left: -15%;
   opacity: 0.7;
-  animation: cloud-move-5 95s linear infinite;
+  animation: none; /* Disable animation */
 }
 
 .cloud-5::before {
@@ -797,12 +766,13 @@ body {
   left: 110px;
 }
 
+/* Disable cloud movement animations by keeping these as references */
 @keyframes cloud-move-1 {
   0% {
     left: -10%;
   }
   100% {
-    left: 110%;
+    left: -10%; /* No movement */
   }
 }
 
@@ -811,7 +781,7 @@ body {
     left: -15%;
   }
   100% {
-    left: 110%;
+    left: -15%; /* No movement */
   }
 }
 
@@ -820,7 +790,7 @@ body {
     left: -20%;
   }
   100% {
-    left: 110%;
+    left: -20%; /* No movement */
   }
 }
 
@@ -829,7 +799,7 @@ body {
     left: -10%;
   }
   100% {
-    left: 110%;
+    left: -10%; /* No movement */
   }
 }
 
@@ -838,7 +808,7 @@ body {
     left: -15%;
   }
   100% {
-    left: 110%;
+    left: -15%; /* No movement */
   }
 }
 
@@ -868,7 +838,7 @@ body {
     rgba(255, 255, 200, 0) 70%
   );
   box-shadow: 0 0 100px 50px rgba(255, 215, 0, 0.4);
-  animation: sun-pulse 10s infinite alternate ease-in-out;
+  animation: none; /* Disable animation */
 }
 
 .sun-rays::before {
@@ -885,17 +855,18 @@ body {
       rgba(255, 255, 200, 0) 6deg
     );
   border-radius: 50%;
-  animation: sun-rotate 120s linear infinite;
+  animation: none; /* Disable animation */
 }
 
+/* Disable sun animations by keeping these as references */
 @keyframes sun-pulse {
   0% {
     opacity: 0.8;
     transform: scale(1);
   }
   100% {
-    opacity: 1;
-    transform: scale(1.1);
+    opacity: 0.8; /* No change */
+    transform: scale(1); /* No change */
   }
 }
 
@@ -904,260 +875,6 @@ body {
     transform: rotate(0deg);
   }
   100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Cloud effect */
-.cloud-effect {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  overflow: hidden;
-}
-
-.cloud {
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  position: absolute;
-  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.1);
-}
-
-.cloud::before,
-.cloud::after {
-  content: '';
-  background: rgba(255, 255, 255, 0.8);
-  position: absolute;
-  border-radius: 50%;
-}
-
-.cloud-1 {
-  width: 300px;
-  height: 100px;
-  top: 15%;
-  left: -10%;
-  opacity: 0.8;
-  animation: cloud-move-1 60s linear infinite;
-}
-
-.cloud-1::before {
-  width: 150px;
-  height: 150px;
-  top: -70px;
-  left: 50px;
-}
-
-.cloud-1::after {
-  width: 100px;
-  height: 100px;
-  top: -40px;
-  left: 160px;
-}
-
-.cloud-2 {
-  width: 200px;
-  height: 70px;
-  top: 30%;
-  left: -15%;
-  opacity: 0.6;
-  animation: cloud-move-2 85s linear infinite;
-}
-
-.cloud-2::before {
-  width: 90px;
-  height: 90px;
-  top: -45px;
-  left: 35px;
-}
-
-.cloud-2::after {
-  width: 70px;
-  height: 70px;
-  top: -30px;
-  left: 100px;
-}
-
-.cloud-3 {
-  width: 250px;
-  height: 80px;
-  top: 50%;
-  left: -20%;
-  opacity: 0.7;
-  animation: cloud-move-3 110s linear infinite;
-}
-
-.cloud-3::before {
-  width: 120px;
-  height: 120px;
-  top: -60px;
-  left: 40px;
-}
-
-.cloud-3::after {
-  width: 80px;
-  height: 80px;
-  top: -35px;
-  left: 120px;
-}
-
-.cloud-4 {
-  width: 180px;
-  height: 60px;
-  top: 65%;
-  left: -10%;
-  opacity: 0.5;
-  animation: cloud-move-4 75s linear infinite;
-}
-
-.cloud-4::before {
-  width: 80px;
-  height: 80px;
-  top: -40px;
-  left: 30px;
-}
-
-.cloud-4::after {
-  width: 60px;
-  height: 60px;
-  top: -25px;
-  left: 90px;
-}
-
-.cloud-5 {
-  width: 220px;
-  height: 75px;
-  top: 80%;
-  left: -15%;
-  opacity: 0.7;
-  animation: cloud-move-5 95s linear infinite;
-}
-
-.cloud-5::before {
-  width: 110px;
-  height: 110px;
-  top: -55px;
-  left: 38px;
-}
-
-.cloud-5::after {
-  width: 75px;
-  height: 75px;
-  top: -32px;
-  left: 110px;
-}
-
-@keyframes cloud-move-1 {
-  0% {
-    left: -10%;
-  }
-  100% {
-    left: 110%;
-  }
-}
-
-@keyframes cloud-move-2 {
-  0% {
-    left: -15%;
-  }
-  100% {
-    left: 110%;
-  }
-}
-
-@keyframes cloud-move-3 {
-  0% {
-    left: -20%;
-  }
-  100% {
-    left: 110%;
-  }
-}
-
-@keyframes cloud-move-4 {
-  0% {
-    left: -10%;
-  }
-  100% {
-    left: 110%;
-  }
-}
-
-@keyframes cloud-move-5 {
-  0% {
-    left: -15%;
-  }
-  100% {
-    left: 110%;
-  }
-}
-
-/* Sun rays effect */
-.sun-rays-effect {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-  overflow: hidden;
-}
-
-.sun-rays {
-  position: absolute;
-  top: 30px;
-  right: 30px;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  background: radial-gradient(circle, 
-    rgba(255, 255, 200, 0.8) 0%, 
-    rgba(255, 255, 200, 0.3) 40%, 
-    rgba(255, 255, 200, 0) 70%
-  );
-  box-shadow: 0 0 100px 50px rgba(255, 215, 0, 0.4);
-  animation: sun-pulse 10s infinite alternate ease-in-out;
-}
-
-.sun-rays::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  left: -60px;
-  right: -60px;
-  bottom: -60px;
-  background: 
-    repeating-conic-gradient(
-      rgba(255, 255, 200, 0) 0deg,
-      rgba(255, 255, 200, 0.2) 3deg,
-      rgba(255, 255, 200, 0) 6deg
-    );
-  border-radius: 50%;
-  animation: sun-rotate 120s linear infinite;
-}
-
-@keyframes sun-pulse {
-  0% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-}
-
-@keyframes sun-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
+    transform: rotate(0deg); /* No rotation */
   }
 }

@@ -546,11 +546,61 @@ function standardizeWeatherCode(code, desc = '') {
     // If we have a description but not a code, try to determine from the description
     // Use regex with i flag for case-insensitive matching
     // And include matches for English, German, and Italian terms
-    if (desc) {
-        // Clear/Sunny
-        if (/sun|clear|klar|heiter|sereno|soleggiato/i.test(desc)) {
-            return 0;
+    if (desc && desc.length > 0) {
+        desc = desc.toLowerCase(); // Convert to lowercase for easier matching
+        
+        // Snow - check this first since it's most weather-dependent
+        if (/\bsnow|\bschnee|\bneve|\bnevica|\bfiocch/i.test(desc)) {
+            // Check for heavy snow
+            if (/heavy|stark|intens|abbondant|dicht/i.test(desc)) {
+                return 75; // Heavy snow
+            }
+            // Check for light snow
+            if (/light|leicht|légèr|legger|schwach/i.test(desc)) {
+                return 71; // Light snow
+            }
+            // Default snow
+            return 73; // Moderate snow
         }
+        
+        // Thunderstorm
+        if (/thunder|storm|gewitter|blitz|temporale|tempesta|fulmin/i.test(desc)) {
+            if (/hail|hagel|grandine/i.test(desc)) {
+                if (/heavy|stark|intens|abbondant/i.test(desc)) {
+                    return 99; // Thunderstorm with heavy hail
+                }
+                return 96; // Thunderstorm with light hail
+            }
+            return 95; // Regular thunderstorm
+        }
+        
+        // Fog
+        if (/fog|nebel|nebbia|mist|nebel|nebelos/i.test(desc)) {
+            if (/freez|frost|ghiacci|eis/i.test(desc)) {
+                return 48; // Freezing fog
+            }
+            return 45; // Regular fog
+        }
+        
+        // Rain
+        if (/rain|regen|pioggia|pluie|precipit|shower|schauer/i.test(desc)) {
+            // Check for heavy rain
+            if (/heavy|stark|intens|abbondant|dicht/i.test(desc)) {
+                return 65; // Heavy rain
+            }
+            // Check for light rain/drizzle
+            if (/light|leicht|légèr|legger|schwach|drizzle|niesel|piovigg/i.test(desc)) {
+                return 51; // Light drizzle
+            }
+            // Check for shower
+            if (/shower|schauer|rovesc/i.test(desc)) {
+                return 80; // Rain shower
+            }
+            // Default rain
+            return 61; // Moderate rain
+        }
+        
+        // Clouds - check after rain/snow/etc. to avoid overmatching
         // Partly Cloudy - specifically check for "partly" or partial terms first
         if (/partly cloud|teilweise bewölkt|parzialmente nuvoloso|partly sunny|teilweise sonnig|parzialmente soleggiato/i.test(desc)) {
             return 2;
@@ -559,27 +609,20 @@ function standardizeWeatherCode(code, desc = '') {
         if (/cloud|bewölkt|nuvoloso|overcast|bedeckt|coperto/i.test(desc)) {
             return 3;
         }
-        // Rain
-        if (/rain|regen|pioggia/i.test(desc)) {
-            return 61;
-        }
-        // Snow
-        if (/snow|schnee|neve/i.test(desc)) {
-            return 71;
-        }
-        // Fog
-        if (/fog|nebel|nebbia/i.test(desc)) {
-            return 45;
-        }
-        // Thunderstorm
-        if (/thunder|gewitter|temporale/i.test(desc)) {
-            return 95;
+        
+        // Clear/Sunny - check last as it's the default for good weather
+        if (/sun|clear|klar|heiter|sereno|soleggiato/i.test(desc)) {
+            return 0;
         }
     }
     
     // If we have a numeric code, use it directly if it's a valid WMO code
-    if (typeof code === 'number' && Object.keys(getSkyconTypeAndColor).includes(code.toString())) {
-        return code;
+    if (typeof code === 'number') {
+        // These are the valid WMO codes we support
+        const validCodes = [0, 1, 2, 3, 45, 48, 51, 53, 55, 61, 63, 65, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99];
+        if (validCodes.includes(code)) {
+            return code;
+        }
     }
     
     // Default to partly cloudy if we can't determine
@@ -789,8 +832,146 @@ const ICON_COLORS = {
     default: "#FFFFFF"  // White as default
 };
 
+// Performance detection variables
+let isLowEndDevice = true; // Changed to true as default
+let devicePerformanceScore = 3; // Default to low performance (3 out of 10)
+
+// Function to detect device performance
+function detectDevicePerformance() {
+    // Check URL parameter first - this allows forcing high performance mode
+    const performanceParam = getUrlParameter('performance');
+    if (performanceParam === 'high') {
+        console.log("High performance mode forced by URL parameter");
+        isLowEndDevice = false;
+        devicePerformanceScore = 10;
+        return; // Skip other detection methods
+    }
+    
+    // Default is now low performance, so we'll only change if specifically
+    // detecting a high-performance device AND no 'low' parameter is set
+    if (performanceParam === 'low') {
+        // Keep default low performance
+        console.log("Low performance mode forced by URL parameter");
+        return;
+    }
+    
+    // The rest of the function is now only to detect if we should use high performance
+    // instead of the default low performance mode
+    
+    // Start with default low score
+    let detectedScore = 3;
+    let shouldUseHighPerformance = false;
+    
+    // Check for TV devices - always use low performance
+    if (navigator.userAgent.toLowerCase().includes('tv') || 
+        navigator.userAgent.toLowerCase().includes('smart-tv') || 
+        navigator.userAgent.toLowerCase().includes('tizen')) {
+        console.log("TV device detected");
+        return; // Keep default low performance
+    }
+    
+    // Check for desktop devices with good specs
+    if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        console.log("Desktop device detected");
+        detectedScore = 8; // Assume decent performance for desktops
+        shouldUseHighPerformance = true;
+    }
+    
+    // Check for maximum memory (available in some browsers)
+    if (navigator.deviceMemory) {
+        console.log("Device memory:", navigator.deviceMemory, "GB");
+        if (navigator.deviceMemory >= 4) {
+            detectedScore = Math.max(detectedScore, 8);
+            shouldUseHighPerformance = true;
+        } else if (navigator.deviceMemory >= 2) {
+            detectedScore = Math.max(detectedScore, 6);
+            shouldUseHighPerformance = true;
+        }
+    }
+
+    // Check for logical CPU cores (available in some browsers)
+    if (navigator.hardwareConcurrency) {
+        console.log("CPU cores:", navigator.hardwareConcurrency);
+        if (navigator.hardwareConcurrency >= 8) {
+            detectedScore = Math.max(detectedScore, 9);
+            shouldUseHighPerformance = true;
+        } else if (navigator.hardwareConcurrency >= 4) {
+            detectedScore = Math.max(detectedScore, 7);
+            shouldUseHighPerformance = true;
+        }
+    }
+    
+    // Run a simple performance test - how long it takes to do some basic calculations
+    const startTime = performance.now();
+    let sum = 0;
+    for (let i = 0; i < 100000; i++) {
+        sum += Math.sqrt(i);
+    }
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    console.log("Performance test duration:", duration, "ms");
+    
+    // Adjust based on performance test
+    if (duration < 50) {
+        detectedScore = Math.max(detectedScore, 9);
+        shouldUseHighPerformance = true;
+    } else if (duration < 100) {
+        detectedScore = Math.max(detectedScore, 7);
+        shouldUseHighPerformance = true;
+    }
+    
+    // Only switch to high performance if we're confident this is a high-end device
+    if (shouldUseHighPerformance && detectedScore >= 7) {
+        isLowEndDevice = false;
+        devicePerformanceScore = detectedScore;
+        console.log("High performance mode activated based on device detection");
+    } else {
+        console.log("Keeping default low performance mode");
+    }
+}
+
+// Replace the setupPerformanceToggle function with a no-op since we're not using the toggle anymore
+function setupPerformanceToggle() {
+    // No-op: We removed the toggle button and now control performance only via URL parameter
+    console.log("Performance mode is set to:", isLowEndDevice ? "LOW" : "HIGH");
+}
+
+// Set current weather code in body dataset for re-application when toggling performance mode
+function setCurrentWeatherCode(code) {
+    document.body.dataset.currentWeatherCode = code;
+}
+
+// Function to set the skycon based on weather code
+function setWeatherIcon(code) {
+    console.log(`Setting weather icon for code: ${code}`);
+    
+    // Ensure code is a number and has a valid mapping
+    const numericCode = parseInt(code, 10) || 2; // Default to partly cloudy (2) if parsing fails
+    const { type, color } = getSkyconTypeAndColor(numericCode);
+    
+    console.log(`Using icon type: ${type} with color: ${color}`);
+    
+    // Clear any existing icon before setting new one
+    Object.values(skycons).forEach(skycon => {
+        skycon.remove("current-icon");
+    });
+    
+    // Add the icon with appropriate color
+    skycons[color].add("current-icon", type);
+    skycons[color].play(); // Ensure animation is running
+    
+    // Store the weather code for performance mode toggling
+    setCurrentWeatherCode(numericCode);
+    
+    // Apply atmospheric effect based on weather code
+    setWeatherAtmosphere(numericCode);
+}
+
 // Initialize Skycons when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Run device performance detection
+    detectDevicePerformance();
+    
     // Initialize different colored skycons
     skycons = {
         sun: new Skycons({ "color": ICON_COLORS.sun, "resizeClear": true }),
@@ -819,11 +1000,25 @@ function getSkyconTypeAndColor(code) {
     // Skycons types: CLEAR_DAY, CLEAR_NIGHT, PARTLY_CLOUDY_DAY, PARTLY_CLOUDY_NIGHT, 
     // CLOUDY, RAIN, SLEET, SNOW, WIND, FOG
     
-    // Map codes to icon types and appropriate colors
+    // Check if it's night time
+    const now = new Date();
+    const hour = now.getHours();
+    const isNight = hour < 6 || hour >= 19; // Night time between 7PM and 6AM
+    
+    // Map codes to icon types and appropriate colors with day/night variations
     const mapping = {
-        0: { type: Skycons.CLEAR_DAY, color: 'sun' },           // Clear sky
-        1: { type: Skycons.PARTLY_CLOUDY_DAY, color: 'cloud' }, // Mainly clear
-        2: { type: Skycons.PARTLY_CLOUDY_DAY, color: 'cloud' }, // Partly cloudy
+        0: { 
+            type: isNight ? Skycons.CLEAR_NIGHT : Skycons.CLEAR_DAY, 
+            color: 'sun' 
+        },
+        1: { 
+            type: isNight ? Skycons.CLEAR_NIGHT : Skycons.CLEAR_DAY, 
+            color: 'sun' 
+        },
+        2: { 
+            type: isNight ? Skycons.PARTLY_CLOUDY_NIGHT : Skycons.PARTLY_CLOUDY_DAY, 
+            color: 'cloud' 
+        },
         3: { type: Skycons.CLOUDY, color: 'cloud' },            // Overcast
         45: { type: Skycons.FOG, color: 'fog' },                // Foggy
         48: { type: Skycons.FOG, color: 'fog' },                // Depositing rime fog
@@ -859,135 +1054,341 @@ function setWeatherAtmosphere(code) {
         window.vantaEffect.destroy();
     }
     
+    // Scale quality based on device performance
+    // These factors will reduce particle count, complexity, etc.
+    const qualityMultiplier = devicePerformanceScore / 10;
+    const animationSpeed = isLowEndDevice ? 0.5 : 1.0;
+    
+    // For very low-end devices, use much simpler settings
+    const particleMultiplier = isLowEndDevice ? 0.3 : qualityMultiplier;
+    
+    // Get current time to adjust colors based on time of day
+    const now = new Date();
+    const hour = now.getHours();
+    const isNight = hour < 6 || hour >= 19; // Night time between 7PM and 6AM
+    const isEvening = hour >= 17 && hour < 19; // Evening time between 5PM and 7PM
+    const isMorning = hour >= 6 && hour < 9; // Morning time between 6AM and 9AM
+    
+    // Get current temperature if available
+    let temperature = null;
+    const tempElement = document.querySelector('.temperature');
+    if (tempElement && tempElement.textContent) {
+        // Extract the temperature value from "XX°C" format
+        const tempMatch = tempElement.textContent.match(/(-?\d+)°/);
+        if (tempMatch) {
+            temperature = parseInt(tempMatch[1]);
+            console.log(`Current temperature: ${temperature}°C`);
+        }
+    }
+    
     // Apply appropriate atmosphere and effects based on weather code
     if (code === 0) {
-        // Clear sky - Sunny
-        window.vantaEffect = VANTA.NET({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            color: 0x3e90e0,
-            backgroundColor: 0x1e4575, // Darker blue
-            points: 10.00,
-            maxDistance: 25.00,
-            spacing: 17.00
-        });
+        // Clear sky - Sunny, adjust based on time of day
+        if (isNight) {
+            // Night clear sky - darker blue, stars
+            window.vantaEffect = VANTA.NET({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x4169e1, // Royal blue for stars
+                backgroundColor: 0x0a1a30, // Very dark blue for night
+                points: Math.max(5, Math.floor(15 * particleMultiplier)), // More stars at night
+                maxDistance: 20.00,
+                spacing: 17.00 + (10 * (1 - qualityMultiplier)),
+                showDots: true
+            });
+        } else if (isEvening) {
+            // Evening clear sky - sunset tones
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false, 
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0xd35400, // Sunset orange
+                cloudColor: 0xf1c40f, // Golden clouds
+                cloudShadowColor: 0x992900,
+                sunGlareColor: 0xff9500,
+                sunlightColor: 0xffb347,
+                speed: 0.5 * animationSpeed,
+                coverage: 0.3,
+                sunPosition: new THREE.Vector3(-1, -0.5, 0) // Setting sun position
+            });
+        } else if (isMorning) {
+            // Morning clear sky - sunrise tones
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x6495ed, // Cornflower blue
+                cloudColor: 0xffd39b, // Warm light clouds
+                cloudShadowColor: 0x102e7a,
+                sunGlareColor: 0xffa07a, // Light salmon
+                sunlightColor: 0xffa500, // Orange
+                speed: 0.6 * animationSpeed,
+                coverage: 0.2,
+                sunPosition: new THREE.Vector3(0, 0, 1) // Rising sun position
+            });
+        } else {
+            // Daytime clear sky
+            window.vantaEffect = VANTA.NET({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x3e90e0,
+                backgroundColor: 0x1e4575, // Darker blue
+                points: Math.max(3, Math.floor(10 * particleMultiplier)),
+                maxDistance: 25.00,
+                spacing: 17.00 + (10 * (1 - qualityMultiplier)), // Increase spacing on low-end
+                showDots: isLowEndDevice ? false : true
+            });
+        }
     } 
     else if (code === 1) {
-        // Mainly clear with some clouds
-        window.vantaEffect = VANTA.BIRDS({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            backgroundColor: 0x2a5298,
-            color1: 0x87ceeb, // Sky blue
-            color2: 0xffffff, // White for clouds
-            birdSize: 1.5,
-            wingSpan: 26.00,
-            speedLimit: 4.00,
-            separation: 50.00,
-            alignment: 1.00,
-            quantity: 3.00
-        });
+        // Mainly clear with some clouds - adjust based on time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x0c1445, // Dark night blue
+                cloudColor: 0x283966, // Dark clouds
+                cloudShadowColor: 0x000000,
+                speed: 0.4 * animationSpeed,
+                coverage: 0.4,
+                sunPosition: new THREE.Vector3(-100, -100, -100) // No sun at night
+            });
+        } else {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x1e64c8, // Deeper blue for clear sky
+                cloudColor: 0xffffff, // White clouds
+                cloudShadowColor: 0x092147,
+                sunGlareColor: 0xf1c056, // Warm sun
+                sunlightColor: 0xf1c056,
+                speed: 0.6 * animationSpeed, // Slower clouds for clear day
+                sunPosition: new THREE.Vector3(1, 2, 1) // Higher sun position
+            });
+        }
     }
     else if (code === 2) {
-        // Partly cloudy
-        window.vantaEffect = VANTA.CLOUDS({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            skyColor: 0x2a4d78, // Darker blue
-            cloudColor: 0xc4c4c4, // Slightly darker clouds
-            cloudShadowColor: 0x092147,
-            sunGlareColor: 0x9e9329, // Less bright sun
-            sunlightColor: 0x9e9329, // Less bright sun
-            speed: 0.8
-        });
+        // Partly cloudy - adjust based on time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x0e1a2d, // Very dark blue
+                cloudColor: 0x1e293b, // Dark gray-blue clouds
+                cloudShadowColor: 0x000000,
+                speed: 0.5 * animationSpeed,
+                coverage: 0.5,
+                sunPosition: new THREE.Vector3(-100, -100, -100) // No sun at night
+            });
+        } else {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x2a4d78, // Darker blue
+                cloudColor: 0xdedede, // Slightly grayer clouds
+                cloudShadowColor: 0x111927,
+                sunGlareColor: 0xf1c056, // Warm sun
+                sunlightColor: 0xf1c056,
+                speed: 0.8 * animationSpeed,
+                coverage: 0.5, // More cloud coverage
+                sunPosition: new THREE.Vector3(0, 1, 0) // Lower sun position
+            });
+        }
     }
     else if (code === 3) {
-        // Fully cloudy / overcast
-        window.vantaEffect = VANTA.FOG({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            highlightColor: 0x8c9da9,
-            midtoneColor: 0x5d6c77,
-            lowlightColor: 0x303f54, // Darker sky
-            baseColor: 0x1a2639,
-            blurFactor: 0.45,
-            speed: 0.7,
-            zoom: 1.1
-        });
+        // Fully cloudy / overcast - adjust slightly for time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x141926, // Darker night sky
+                cloudColor: 0x2c3e50, // Very dark clouds
+                cloudShadowColor: 0x000000,
+                speed: 0.3 * animationSpeed,
+                coverage: 0.8,
+                sunPosition: new THREE.Vector3(-100, -100, -100) // No sun at night
+            });
+        } else {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x303f54, // Dark sky
+                cloudColor: 0xb0b0b0, // Gray clouds
+                cloudShadowColor: 0x1a1a1a,
+                speed: 0.4 * animationSpeed,
+                coverage: 0.8, // Heavy cloud coverage
+                sunPosition: new THREE.Vector3(-5, -1, 0) // Almost hidden sun
+            });
+        }
     }
     else if ((code >= 51 && code <= 55) || (code === 61)) {
-        // Light rain / drizzle
-        window.vantaEffect = VANTA.WAVES({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            color: 0x2f4a75,
-            shininess: 35.00,
-            waveHeight: 13.00,
-            waveSpeed: 0.75,
-            zoom: 0.88
-        });
+        // Light rain / drizzle - adjust for time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.WAVES({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x1c2331,
+                shininess: 25.00 * qualityMultiplier,
+                waveHeight: 10.00,
+                waveSpeed: 0.65 * animationSpeed,
+                zoom: 0.95
+            });
+        } else {
+            window.vantaEffect = VANTA.WAVES({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x2f4a75,
+                shininess: 35.00 * qualityMultiplier,
+                waveHeight: 13.00,
+                waveSpeed: 0.75 * animationSpeed,
+                zoom: 0.88
+            });
+        }
     }
     else if ((code >= 63 && code <= 65) || (code >= 80 && code <= 82)) {
-        // Moderate to heavy rain
-        window.vantaEffect = VANTA.WAVES({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            color: 0x253242, // Darker
-            shininess: 60.00,
-            waveHeight: 20.00,
-            waveSpeed: 1.05,
-            zoom: 0.65
-        });
+        // Moderate to heavy rain - minimal time of day adjustment
+        if (isNight) {
+            window.vantaEffect = VANTA.WAVES({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x1a2639, // Darker for night
+                shininess: 50.00 * qualityMultiplier,
+                waveHeight: 18.00,
+                waveSpeed: 0.95 * animationSpeed,
+                zoom: 0.70
+            });
+        } else {
+            window.vantaEffect = VANTA.WAVES({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x253242, // Darker
+                shininess: 60.00 * qualityMultiplier,
+                waveHeight: 20.00,
+                waveSpeed: 1.05 * animationSpeed,
+                zoom: 0.65
+            });
+        }
     }
     else if ((code >= 71 && code <= 75)) {
-        // Snow (light to heavy)
-        window.vantaEffect = VANTA.CLOUDS({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            skyColor: 0x404a54, // Dark blue-gray
-            cloudColor: 0xebebeb, // Very light gray clouds
-            cloudShadowColor: 0x393f46,
-            speed: 0.6
-        });
+        // Snow (light to heavy) - consider temperature too
+        const coldSnow = temperature !== null && temperature < -5; // Extra cold snow
+        const warmSnow = temperature !== null && temperature > 0; // Near melting point
+        
+        if (isNight) {
+            window.vantaEffect = VANTA.FOG({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: coldSnow ? 0x9eacb8 : 0xb3c0c8, // Colder blue for very cold
+                midtoneColor: coldSnow ? 0x4a5c6a : 0x5c6870,
+                lowlightColor: 0x2a3438,
+                baseColor: 0x232a34,
+                speed: 1.20 * animationSpeed,
+                blurFactor: 0.8
+            });
+        } else {
+            // Adjust cloud colors based on temperature
+            let cloudColor = 0xebebeb; // Default light gray clouds
+            let skyColor = 0x404a54; // Default gray-blue sky
+            
+            if (coldSnow) {
+                // Colder blue tones for very cold snow
+                cloudColor = 0xd6e4f0;
+                skyColor = 0x2c3e50;
+            } else if (warmSnow) {
+                // Warmer gray tones for snow near melting point
+                cloudColor = 0xf5f5f5;
+                skyColor = 0x4d5d6c;
+            }
+            
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: skyColor,
+                cloudColor: cloudColor,
+                cloudShadowColor: 0x393f46,
+                speed: 0.6 * animationSpeed,
+                coverage: 0.7 // Higher coverage for snow
+            });
+        }
     }
     else if ((code === 77) || (code >= 85 && code <= 86)) {
-        // Snow grains / Snow showers
+        // Snow grains / Snow showers - consider temperature too
+        const isCold = temperature !== null && temperature < -5;
+        
         window.vantaEffect = VANTA.FOG({
             el: "#vanta-background",
             mouseControls: false,
@@ -995,86 +1396,132 @@ function setWeatherAtmosphere(code) {
             gyroControls: false,
             minHeight: 200.00,
             minWidth: 200.00,
-            highlightColor: 0xb3c0c8, // Less bright
-            midtoneColor: 0x5c6870, // Darker midtone
-            lowlightColor: 0x3e4648, // Darker lowlight
-            baseColor: 0x404a54, // Dark base
-            speed: 1.50,
+            highlightColor: isCold ? 0xa4bcd0 : 0xb3c0c8, // Bluer for colder temps
+            midtoneColor: isCold ? 0x4e6378 : 0x5c6870,
+            lowlightColor: isCold ? 0x303c48 : 0x3e4648,
+            baseColor: isCold ? 0x2a3541 : 0x404a54,
+            speed: 1.50 * animationSpeed,
             blurFactor: 0.6
         });
     }
     else if (code === 45 || code === 48) {
-        // Fog
-        window.vantaEffect = VANTA.FOG({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            highlightColor: 0x8a9496, // Darker highlight
-            midtoneColor: 0x464e50, // Darker midtone
-            lowlightColor: 0x212526, // Darker lowlight
-            baseColor: 0x383c3d, // Dark base
-            speed: 0.60,
-            blurFactor: 0.95
-        });
+        // Fog - slight adjustments for time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.FOG({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: 0x5a6269, // Darker for night
+                midtoneColor: 0x353a3c,
+                lowlightColor: 0x171a1b,
+                baseColor: 0x20252a,
+                speed: 0.50 * animationSpeed,
+                blurFactor: 0.98
+            });
+        } else {
+            window.vantaEffect = VANTA.FOG({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: 0x8a9496, // Darker highlight
+                midtoneColor: 0x464e50, // Darker midtone
+                lowlightColor: 0x212526, // Darker lowlight
+                baseColor: 0x383c3d, // Dark base
+                speed: 0.60 * animationSpeed,
+                blurFactor: 0.95
+            });
+        }
     }
     else if (code >= 95) {
-        // Thunderstorm 
-        window.vantaEffect = VANTA.TRUNK({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.00,
-            scaleMobile: 1.00,
-            color: 0x2269bd,
-            backgroundColor: 0x1a1f21, // Very dark blue
-            spacing: 5.00,
-            chaos: 4.50
-        });
+        // Thunderstorm - minimal adjustments for time of day
+        if (isLowEndDevice) {
+            // Use CLOUDS instead of TRUNK for low-end devices
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: isNight ? 0x0d0f10 : 0x1a1f21, // Darker for night
+                cloudColor: isNight ? 0x1a1c1d : 0x3a3e3f,
+                cloudShadowColor: 0x000000,
+                speed: 1.5 * animationSpeed,
+                coverage: 0.9
+            });
+        } else {
+            window.vantaEffect = VANTA.TRUNK({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: isNight ? 0x1e4e94 : 0x2269bd,
+                backgroundColor: isNight ? 0x0d1115 : 0x1a1f21,
+                spacing: 5.00 + (10 * (1 - qualityMultiplier)), 
+                chaos: 4.50 * qualityMultiplier
+            });
+        }
     }
     else {
-        // Default to calm clouds for any other codes
-        window.vantaEffect = VANTA.CLOUDS({
-            el: "#vanta-background",
-            mouseControls: false,
-            touchControls: false,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            skyColor: 0x384352, // Darker sky
-            cloudColor: 0x9a9a9a, // Darker clouds
-            cloudShadowColor: 0x293545,
-            speed: 0.7
-        });
+        // Default to calm clouds for any other codes - adjust for time of day
+        if (isNight) {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x1a222e, // Dark night sky
+                cloudColor: 0x3d4855, // Dark night clouds
+                cloudShadowColor: 0x111518,
+                speed: 0.5 * animationSpeed
+            });
+        } else {
+            window.vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x384352, // Darker sky
+                cloudColor: 0x9a9a9a, // Darker clouds
+                cloudShadowColor: 0x293545,
+                speed: 0.7 * animationSpeed
+            });
+        }
     }
-}
 
-// Function to set the skycon based on weather code
-function setWeatherIcon(code) {
-    console.log(`Setting weather icon for code: ${code}`);
-    
-    // Ensure code is a number and has a valid mapping
-    const numericCode = parseInt(code, 10) || 2; // Default to partly cloudy (2) if parsing fails
-    const { type, color } = getSkyconTypeAndColor(numericCode);
-    
-    console.log(`Using icon type: ${type} with color: ${color}`);
-    
-    // Clear any existing icon before setting new one
-    Object.values(skycons).forEach(skycon => {
-        skycon.remove("current-icon");
-    });
-    
-    // Add the icon with appropriate color
-    skycons[color].add("current-icon", type);
-    skycons[color].play(); // Ensure animation is running
-    
-    // Apply atmospheric effect based on weather code
-    setWeatherAtmosphere(numericCode);
+    // Add a performance info indicator when in low performance mode
+    if (isLowEndDevice) {
+        let performanceIndicator = document.getElementById('performance-indicator');
+        if (!performanceIndicator) {
+            performanceIndicator = document.createElement('div');
+            performanceIndicator.id = 'performance-indicator';
+            performanceIndicator.style.position = 'fixed';
+            performanceIndicator.style.bottom = '10px';
+            performanceIndicator.style.right = '10px';
+            performanceIndicator.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            performanceIndicator.style.color = 'white';
+            performanceIndicator.style.padding = '5px 10px';
+            performanceIndicator.style.borderRadius = '5px';
+            performanceIndicator.style.fontSize = '12px';
+            performanceIndicator.style.zIndex = '1000';
+            performanceIndicator.textContent = 'Low performance mode';
+            document.body.appendChild(performanceIndicator);
+        }
+    }
 }
 
 // Update the displayStationWeather function to handle missing data
@@ -1109,19 +1556,52 @@ function displayStationWeather(station) {
         const temp = station.t;
         const humidity = station.rh;
         
-        if (temp > 25 && humidity < 50) {
-            weatherCode = 0; // Clear sky/sunny for hot and dry
-        } else if (temp < 5) {
-            weatherCode = 71; // Light snow for cold
-        } else if (humidity > 80) {
-            weatherCode = 61; // Light rain for high humidity
-        } else if (humidity > 60) {
-            weatherCode = 3; // Overcast for medium-high humidity
-        } else if (humidity > 40) {
-            weatherCode = 2; // Partly cloudy for medium humidity
+        // Check if we have precipitation data
+        const hasPrecipitation = station.precipitationSum !== undefined && station.precipitationSum > 0;
+        
+        // Get current time to check if it's night
+        const now = new Date();
+        const hour = now.getHours();
+        const isNight = hour < 6 || hour >= 19;
+        
+        // Enhanced weather code determination based on multiple conditions
+        if (hasPrecipitation) {
+            if (temp < 2) {
+                // Precipitation when cold - likely snow
+                weatherCode = 71; // Light snow
+            } else {
+                // Precipitation when warmer - rain
+                weatherCode = 61; // Light rain
+            }
+        } else if (temp < 0) {
+            // Below freezing
+            if (humidity > 80) {
+                weatherCode = 71; // Light snow
+            } else {
+                // Cold but clear/partly cloudy
+                weatherCode = isNight ? 1 : 0;
+            }
+        } else if (temp > 30) {
+            // Very hot - likely clear or partly cloudy
+            weatherCode = humidity > 50 ? 2 : 0;
+        } else if (humidity > 85) {
+            // Very humid - likely overcast or foggy
+            weatherCode = humidity > 95 ? 45 : 3; // Fog or overcast
+        } else if (humidity > 70) {
+            // Medium-high humidity - overcast or partly cloudy
+            weatherCode = 3; // Overcast
+        } else if (humidity > 50) {
+            // Medium humidity - partly cloudy
+            weatherCode = 2; // Partly cloudy
+        } else if (humidity > 30) {
+            // Low-medium humidity - mainly clear
+            weatherCode = 1; // Mainly clear
         } else {
-            weatherCode = 1; // Mainly clear for low humidity
+            // Low humidity - likely clear
+            weatherCode = 0; // Clear sky
         }
+        
+        console.log(`Determined weather from conditions: temp=${temp}°C, humidity=${humidity}%, precipitation=${hasPrecipitation}, night=${isNight}`);
     }
     
     console.log(`Determined weather code: ${weatherCode}`);
