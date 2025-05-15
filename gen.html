@@ -5,19 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate Weather Link</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- Use CDN for Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <!-- Use CDN for Vanta.js effects -->
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.clouds.min.js"></script>
     <style>
         .generator-container {
             max-width: 800px;
             margin: 0 auto;
             padding: 2rem;
+            background: var(--card-background);
+            backdrop-filter: var(--glass-effect);
+            border-radius: 24px;
+            box-shadow: 0 12px 48px var(--shadow-color);
+            margin-top: 80px;
+            border: 1px solid var(--border-color);
         }
 
         .location-info {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(30, 40, 70, 0.4);
             padding: 2rem;
             border-radius: 16px;
             margin: 2rem 0;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.13);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+            backdrop-filter: var(--glass-effect);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .city-select-container {
@@ -28,7 +41,7 @@
             width: 100%;
             padding: 1rem;
             font-size: 1.2rem;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(30, 40, 70, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             color: #fff;
@@ -36,26 +49,34 @@
             transition: all 0.3s ease;
         }
 
+        #city-select option, #city-select optgroup {
+            background: #192338;
+            color: #fff;
+        }
+
         #city-select:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(40, 50, 80, 0.7);
+            border-color: var(--primary-color);
         }
 
         #city-select:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+            box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.3);
         }
 
         #city-weather-summary {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(30, 40, 70, 0.5);
             padding: 1.5rem;
             border-radius: 12px;
             margin-top: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .copy-link {
             background: var(--primary-color);
-            color: #000;
+            color: white;
             border: none;
             padding: 1rem 2rem;
             border-radius: 8px;
@@ -65,17 +86,20 @@
             margin-top: 1.5rem;
             transition: all 0.3s ease;
             width: 100%;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .copy-link:hover {
-            background: #ffd900;
+            background: var(--primary-light);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
         }
 
         .copy-link:disabled {
-            background: #666;
+            background: #4a4a4a;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
         .back-link {
@@ -84,13 +108,14 @@
             display: inline-flex;
             align-items: center;
             font-size: 1.1rem;
-            font-weight: 500;
+            font-weight: 600;
             margin-bottom: 2rem;
             transition: all 0.3s ease;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .back-link:hover {
-            color: #ffd900;
+            color: var(--primary-light);
             transform: translateX(-5px);
         }
 
@@ -98,20 +123,72 @@
             font-size: 2.5rem;
             margin-bottom: 1rem;
             color: var(--primary-color);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
         }
 
         p {
             font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.9);
             margin-bottom: 2rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .top-bar-time {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem 2rem;
+            background: rgba(30, 40, 70, 0.6);
+            backdrop-filter: var(--glass-effect);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+        }
+        
+        .current-time {
+            font-size: 1.3rem;
+            color: var(--text-color);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: rgba(30, 40, 70, 0.6);
+            padding: 0.5rem 1.2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Responsive tweaks */
+        @media (max-width: 768px) {
+            .generator-container {
+                padding: 1rem;
+                margin-top: 60px;
+            }
+            
+            .location-info {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Weather effect elements (to be managed by Vanta.js) -->
+    <div id="vanta-background"></div>
+    
+    <div class="top-bar-time">
+        <span class="current-time" id="current-time-display"></span>
+    </div>
+    
     <div class="generator-container">
-        <a href="index.html" class="back-link">← Back to Weather</a>
-        <h1>Select a City</h1>
-        <p>Choose a city from the dropdown to view its weather forecast.</p>
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back to Weather</a>
+        <h1>Weather Link Generator</h1>
+        <p>Choose a city from the dropdown to create a shareable link with that city's weather forecast.</p>
         
         <div class="location-info">
             <div class="city-select-container">
@@ -120,13 +197,45 @@
                 </select>
             </div>
             <div id="city-weather-summary" style="display:none;"></div>
-            <button class="copy-link" id="copy-link" disabled>Copy Weather Link</button>
+            <button class="copy-link" id="copy-link" disabled><i class="fas fa-link" style="margin-right: 8px;"></i> Copy Weather Link</button>
         </div>
     </div>
 
     <script>
         let selectedCity = null;
         let stationsList = [];
+        let vantaEffect = null;
+
+        // Function to initialize Vanta.js background
+        function initVantaEffect() {
+            if (vantaEffect) {
+                vantaEffect.destroy();
+            }
+            
+            vantaEffect = VANTA.CLOUDS({
+                el: "#vanta-background",
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                skyColor: 0x2a4d78, // Darker blue
+                cloudColor: 0xaaaaaa, // Gray clouds
+                cloudShadowColor: 0x111111,
+                sunGlareColor: 0x9e9329,
+                sunlightColor: 0x9e9329,
+                speed: 0.8
+            });
+        }
+
+        // Function to update the current time
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeDisplay = document.getElementById('current-time-display');
+            if (timeDisplay) {
+                timeDisplay.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+        }
 
         // Function to get district for a station
         async function getDistrictForStation(station) {
@@ -412,8 +521,16 @@
             }
         }
 
-        // Handle city selection
+        // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Vanta effect
+            initVantaEffect();
+            
+            // Update and start time display
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 60000);
+            
+            // Fetch stations and populate dropdown
             fetchStations();
             
             document.getElementById('city-select').addEventListener('change', (e) => {
@@ -434,11 +551,11 @@
                     }
                     
                     summaryBox.innerHTML = `
-                        <div style="font-size:1.5rem;font-weight:700;">${selectedCity.cleanName}</div>
+                        <div style="font-size:1.5rem;font-weight:700;margin-bottom:10px;">${selectedCity.cleanName}</div>
                         <div style="font-size:2.2rem;margin:0.5rem 0;color:var(--primary-color);">${Math.round(selectedCity.t)}°C</div>
-                        <div>Humidity: <b>${Math.round(selectedCity.rh)}%</b></div>
-                        <div>Wind: <b>${Math.round(selectedCity.ff)} km/h ${selectedCity.dd || ''}</b></div>
-                        <div style="margin-top:0.5rem;font-size:1rem;color:#ccc;">${formattedTime}</div>
+                        <div><i class="fas fa-tint" style="color:var(--primary-color);margin-right:8px;"></i> Humidity: <b>${Math.round(selectedCity.rh)}%</b></div>
+                        <div><i class="fas fa-wind" style="color:var(--primary-color);margin-right:8px;"></i> Wind: <b>${Math.round(selectedCity.ff)} km/h ${selectedCity.dd || ''}</b></div>
+                        <div style="margin-top:0.8rem;font-size:0.9rem;opacity:0.7;"><i class="fas fa-sync" style="margin-right:5px;"></i>${formattedTime}</div>
                     `;
                     summaryBox.style.display = '';
                     document.getElementById('copy-link').disabled = false;
@@ -459,9 +576,9 @@
             
             navigator.clipboard.writeText(weatherLink).then(() => {
                 const button = document.getElementById('copy-link');
-                button.textContent = 'Link Copied!';
+                button.textContent = '✓ Link Copied!';
                 setTimeout(() => {
-                    button.textContent = 'Copy Weather Link';
+                    button.innerHTML = '<i class="fas fa-link" style="margin-right: 8px;"></i> Copy Weather Link';
                 }, 2000);
             });
         });
