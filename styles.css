@@ -907,3 +907,43 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* Generator link in top bar */
+.generator-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  background: rgba(30, 40, 70, 0.6);
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  margin-left: 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.generator-link i {
+  margin-right: 5px;
+}
+
+.generator-link:hover {
+  background: rgba(40, 50, 80, 0.8);
+  transform: translateY(-2px);
+  color: var(--primary-light);
+}
+
+@media (max-width: 768px) {
+  .top-bar-time {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .generator-link {
+    margin-left: 0;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+}

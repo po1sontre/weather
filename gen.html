@@ -186,7 +186,7 @@
     </div>
     
     <div class="generator-container">
-        <a href="index.html" class="back-link"><i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back to Weather</a>
+        <a href="#" class="back-link"><i class="fas fa-arrow-left" style="margin-right: 8px;"></i> Back to Weather</a>
         <h1>Weather Link Generator</h1>
         <p>Choose a city from the dropdown to create a shareable link with that city's weather forecast.</p>
         
@@ -530,6 +530,21 @@
             updateCurrentTime();
             setInterval(updateCurrentTime, 60000);
             
+            // Fix "Back to Weather" link for GitHub Pages
+            const backLink = document.querySelector('.back-link');
+            if (backLink) {
+                // Get current URL without the file part
+                let currentUrl = window.location.href.split('/gen.html')[0];
+                
+                // Remove trailing 'gen' directory if it exists
+                if (currentUrl.endsWith('/gen')) {
+                    currentUrl = currentUrl.substring(0, currentUrl.length - 4);
+                }
+                
+                // Set the correct back link
+                backLink.href = `${currentUrl}/index.html`;
+            }
+            
             // Fetch stations and populate dropdown
             fetchStations();
             
@@ -570,8 +585,19 @@
         document.getElementById('copy-link').addEventListener('click', () => {
             if (!selectedCity) return;
             
-            const baseUrl = window.location.href.split('/gen.html')[0].replace(/\/$/, '');
-            // Point to index.html for the main weather page
+            // Get the base URL while handling potential GitHub Pages structure
+            // Extract the base URL - split at gen.html and go up a level if needed
+            let baseUrl = window.location.href.split('/gen.html')[0];
+            
+            // Remove trailing 'gen' directory if it exists
+            if (baseUrl.endsWith('/gen')) {
+                baseUrl = baseUrl.substring(0, baseUrl.length - 4);
+            }
+            
+            // Remove any trailing slashes
+            baseUrl = baseUrl.replace(/\/$/, '');
+            
+            // Create the weather link using the corrected base URL
             const weatherLink = `${baseUrl}/index.html?city=${encodeURIComponent(selectedCity.cleanName)}&district=${selectedCity.district.id}`;
             
             navigator.clipboard.writeText(weatherLink).then(() => {
