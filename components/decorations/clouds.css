@@ -1,0 +1,677 @@
+/* Decorative Weather Clouds */
+
+/* Common cloud styles */
+.decoration-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Base cloud style */
+.cloud-decoration {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.5s ease;
+  animation: cloudMovement 120s linear infinite;
+  /* Use 3D transform for smoother animation */
+  transform: translateX(-100vw) translateZ(0);
+  will-change: transform;
+}
+
+/* Left sided cloud */
+.cloud-left {
+  top: 120px;
+  left: 15%;
+  transform: scale(0.8);
+}
+
+/* Right sided cloud */
+.cloud-right {
+  top: 180px;
+  right: 15%;
+  transform: scale(0.7);
+}
+
+/* Cloud base */
+.cloud {
+  height: 120px;
+  width: 120px;
+  border-radius: 150px 150px 0px 0px;
+  position: relative;
+  background: #fff;
+  box-shadow: inset 20px 10px 40px -32px rgba(0,0,0,0.75);
+  animation: float 8s ease-in-out infinite;
+}
+
+.cloud:before, 
+.cloud:after {
+  content: ' ';
+  display: block;
+  position: absolute;
+  bottom: 0px;
+  background: #fff;
+  box-shadow: inset 20px 10px 40px -32px rgba(0,0,0,0.75);
+}
+
+.cloud:before {
+  height: 70px;
+  width: 70px;
+  border-radius: 150px 150px 0px 150px;
+  left: -40px;
+}
+
+.cloud:after {
+  height: 85px;
+  width: 85px;
+  border-radius: 150px 150px 150px 0px;
+  right: -55px;
+  z-index: -1;
+}
+
+/* Snow drops */
+.drop {
+  background: white;
+  width: 6px;
+  height: 6px;
+  border-radius: 12px;
+  position: absolute;
+  animation: fall 3s ease-in infinite;
+  animation-fill-mode: both;
+  opacity: 0.8;
+}
+
+/* Different drop positions */
+.drop:nth-child(even) {
+  top: 10px;
+  left: -12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 40px;
+  animation-delay: 1s;
+}
+
+.drop:nth-child(3n - 1) {
+  top: 0px;
+  left: 20px;
+  animation-delay: 2s;
+}
+
+.drop:nth-child(3n + 1) {
+  left: 0px;
+  top: -10px;
+  animation-delay: 3s;
+}
+
+.drop:nth-child(4n - 1) {
+  left: 110px;
+  top: -30px;
+  animation-delay: 2.5s;
+}
+
+.drop:nth-child(4n + 1) {
+  left: 45px;
+  top: 15px;
+  animation-delay: 1.5s;
+}
+
+.drop:nth-child(5n - 1) {
+  left: 95px;
+  top: -40px;
+}
+
+.drop:nth-child(-5n + 1) {
+  left: 65px;
+  top: 10px;
+  animation-delay: 2.25s;
+}
+
+.drop:nth-child(6n + 1) {
+  left: 37px;
+  top: -65px;
+  animation-delay: 1.25s;
+}
+
+/* Rain drops */
+.rain-drop {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.7);
+  width: 2px;
+  height: 15px;
+  border-radius: 0 0 5px 5px;
+  transform: rotate(15deg);
+  animation: rain-fall 1.5s linear infinite;
+  animation-fill-mode: both;
+}
+
+/* Different rain drop positions */
+.rain-drop:nth-child(even) {
+  top: 80px;
+  left: 25px;
+  height: 20px;
+  animation-delay: 0.5s;
+}
+
+.rain-drop:nth-child(3n - 1) {
+  top: 90px;
+  left: 55px;
+  height: 17px;
+  animation-delay: 0.7s;
+}
+
+.rain-drop:nth-child(3n + 1) {
+  top: 85px;
+  left: 75px;
+  height: 13px;
+  animation-delay: 0.2s;
+}
+
+.rain-drop:nth-child(4n - 1) {
+  top: 95px;
+  left: 95px;
+  height: 18px;
+  animation-delay: 0.6s;
+}
+
+.rain-drop:nth-child(4n + 1) {
+  top: 100px;
+  left: 115px;
+  height: 15px;
+  animation-delay: 0.8s;
+}
+
+.rain-drop:nth-child(5n - 1) {
+  top: 90px;
+  left: 40px;
+  height: 12px;
+  animation-delay: 0.4s;
+}
+
+/* Animations */
+@keyframes fall {
+  0% {
+    margin-top: 90px;
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    margin-left: 45px;
+  }
+  100% {
+    margin-top: 400px;
+    opacity: 0;
+  }
+}
+
+@keyframes rain-fall {
+  0% {
+    transform: translateY(0) rotate(15deg);
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(200px) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+/* Night mode adjustments */
+body.night .cloud,
+body.night .cloud:before,
+body.night .cloud:after {
+  background: #ddd;
+}
+
+/* Make clouds more visible on different backgrounds */
+body.weather-clear .cloud,
+body.weather-clear .cloud:before,
+body.weather-clear .cloud:after {
+  opacity: 0.7;
+}
+
+body.weather-partly-cloudy .cloud,
+body.weather-partly-cloudy .cloud:before,
+body.weather-partly-cloudy .cloud:after {
+  opacity: 0.9;
+}
+
+/* Adjust cloud shadows based on weather */
+body.weather-cloudy .cloud,
+body.weather-cloudy .cloud:before,
+body.weather-cloudy .cloud:after {
+  box-shadow: inset 20px 10px 40px -25px rgba(0,0,0,0.6);
+}
+
+body.weather-rainy .cloud,
+body.weather-rainy .cloud:before,
+body.weather-rainy .cloud:after {
+  box-shadow: inset 20px 10px 40px -20px rgba(0,0,0,0.7);
+  background: #e0e0e0;
+}
+
+body.weather-snowy .cloud,
+body.weather-snowy .cloud:before,
+body.weather-snowy .cloud:after {
+  box-shadow: inset 20px 10px 40px -20px rgba(0,0,0,0.5);
+}
+
+/* Cloud Decorations */
+
+/* Normal Cloud */
+.normal-cloud {
+  width: 180px;
+  height: 60px;
+  background: #f2f9fe;
+  background: linear-gradient(#f2f9fe 5%, #d6f0fd 100%);
+  border-radius: 50px;
+  position: relative;
+}
+
+.normal-cloud:after, .normal-cloud:before {
+  content: "";
+  position: absolute;
+  background: #f2f9fe;
+  z-index: -1;
+}
+
+.normal-cloud:after {
+  width: 50px;
+  height: 50px;
+  top: -25px;
+  left: 25px;
+  border-radius: 50px;
+}
+
+.normal-cloud:before {
+  width: 90px;
+  height: 90px;
+  top: -45px;
+  right: 25px;
+  border-radius: 100px;
+}
+
+/* Rainy Cloud */
+.rainy-cloud {
+  position: relative;
+  width: 180px;
+  height: 65px;
+}
+
+.rainy-cloud .cloud-main {
+  width: 180px;
+  height: 65px;
+  background: #ccc;
+  border-radius: 50px;
+  position: absolute;
+  z-index: 100;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(#f2f2f2 70%, #e5e5e5);
+}
+
+.rainy-cloud .cloud-center {
+  width: 90px;
+  height: 90px;
+  background: #f2f2f2;
+  position: absolute;
+  border-radius: 50%;
+  top: -15px;
+  right: 25px;
+}
+
+.rainy-cloud .cloud-left {
+  width: 65px;
+  height: 65px;
+  background: #f2f2f2;
+  position: absolute;
+  border-radius: 50%;
+  top: 0;
+  right: 80px;
+}
+
+.rainy-cloud .droplet {
+  width: 8px;
+  height: 15px;
+  background: radial-gradient(#a4ddf5, #76cbf1);
+  position: absolute;
+  border-radius: 5px 5px 5px 5px / 15px 15px 5px 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rainy-cloud .droplet1, .rainy-cloud .droplet4 {
+  right: 40px;
+  top: 50px;
+}
+
+.rainy-cloud .droplet2, .rainy-cloud .droplet5 {
+  right: 70px;
+  top: 65px;
+}
+
+.rainy-cloud .droplet3, .rainy-cloud .droplet6 {
+  right: 100px;
+  top: 50px;
+}
+
+.rainy-cloud .droplet1, .rainy-cloud .droplet2, .rainy-cloud .droplet3 {
+  animation: rain2 linear 1.5s infinite 0.75s;
+}
+
+.rainy-cloud .droplet4, .rainy-cloud .droplet5, .rainy-cloud .droplet6 {
+  animation: rain linear 1.5s infinite;
+}
+
+@keyframes rain {
+  0% {
+    transform: rotate(30deg) translate(0, 0);
+    opacity: 1;
+  }
+  90% {
+    transform: rotate(30deg) translate(0, 60px);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(30deg) translate(0, 70px);
+    opacity: 0;
+  }
+}
+
+@keyframes rain2 {
+  0% {
+    transform: rotate(30deg) translate(0, 0);
+    opacity: 1;
+  }
+  90% {
+    transform: rotate(30deg) translate(0, 60px);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(30deg) translate(0, 70px);
+    opacity: 0;
+  }
+}
+
+/* Snowy Cloud */
+.snowy-cloud {
+  position: relative;
+  width: 180px;
+  height: 65px;
+}
+
+.snowy-cloud .cloud-main {
+  width: 180px;
+  height: 65px;
+  background: #ccc;
+  border-radius: 50px;
+  position: absolute;
+  z-index: 100;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(#f2f2f2 70%, #e5e5e5);
+}
+
+.snowy-cloud .cloud-center {
+  width: 90px;
+  height: 90px;
+  background: #f2f2f2;
+  position: absolute;
+  border-radius: 50%;
+  top: -15px;
+  right: 25px;
+}
+
+.snowy-cloud .cloud-left {
+  width: 65px;
+  height: 65px;
+  background: #f2f2f2;
+  position: absolute;
+  border-radius: 50%;
+  top: 0;
+  right: 80px;
+}
+
+.snowy-cloud .snowflake {
+  width: 8px;
+  height: 8px;
+  background: white;
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.9;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+.snowy-cloud .snowflake1 {
+  right: 40px;
+  top: 50px;
+  animation: snow 3s linear infinite;
+}
+
+.snowy-cloud .snowflake2 {
+  right: 70px;
+  top: 65px;
+  animation: snow 3s linear infinite 0.5s;
+}
+
+.snowy-cloud .snowflake3 {
+  right: 100px;
+  top: 50px;
+  animation: snow 3s linear infinite 1s;
+}
+
+.snowy-cloud .snowflake4 {
+  right: 55px;
+  top: 50px;
+  animation: snow 3s linear infinite 1.5s;
+}
+
+.snowy-cloud .snowflake5 {
+  right: 85px;
+  top: 65px;
+  animation: snow 3s linear infinite 2s;
+}
+
+@keyframes snow {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-5px, 30px) rotate(180deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(5px, 60px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Cloud Positioning */
+.cloud-top-left {
+  top: 15%;
+  left: 10%;
+}
+
+.cloud-top-right {
+  top: 20%;
+  right: 10%;
+}
+
+.cloud-bottom-left {
+  bottom: 30%;
+  left: 15%;
+}
+
+.cloud-bottom-right {
+  bottom: 35%;
+  right: 15%;
+}
+
+/* Cloud Sizes */
+.cloud-small {
+  transform: scale(0.5);
+}
+
+.cloud-medium {
+  transform: scale(0.75);
+}
+
+.cloud-large {
+  transform: scale(1);
+}
+
+/* Weather-specific visibility */
+body.weather-clear .cloud-decoration,
+body.weather-foggy .cloud-decoration,
+body.weather-thunder .cloud-decoration {
+  opacity: 0;
+  /* Pause animation when clouds are invisible to save resources */
+  animation-play-state: paused;
+}
+
+body.weather-partly-cloudy .normal-cloud {
+  opacity: 0.6;
+}
+
+body.weather-cloudy .normal-cloud {
+  opacity: 0.8;
+}
+
+body.weather-rainy .normal-cloud {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+body.weather-rainy .rainy-cloud {
+  opacity: 0.9;
+}
+
+body.weather-snowy .normal-cloud,
+body.weather-snowy .rainy-cloud {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+body.weather-snowy .snowy-cloud {
+  opacity: 0.9;
+}
+
+/* Night mode adjustments */
+body.night .normal-cloud,
+body.night .rainy-cloud .cloud-main,
+body.night .rainy-cloud .cloud-center,
+body.night .rainy-cloud .cloud-left,
+body.night .snowy-cloud .cloud-main,
+body.night .snowy-cloud .cloud-center,
+body.night .snowy-cloud .cloud-left {
+  filter: brightness(0.7) saturate(0.8);
+}
+
+/* Cloud sliding animation */
+@keyframes cloudMovement {
+  0% {
+    transform: translateX(-100vw) translateZ(0);
+  }
+  100% {
+    transform: translateX(100vw) translateZ(0);
+  }
+}
+
+/* Different timing for each cloud to avoid uniform movement */
+.cloud-decoration:nth-child(2n) {
+  animation-duration: 150s;
+}
+
+.cloud-decoration:nth-child(3n) {
+  animation-duration: 180s;
+}
+
+.cloud-decoration:nth-child(5n) {
+  animation-duration: 200s;
+}
+
+/* Cloud Sizes - adjusted to work properly with the animation */
+.cloud-small .cloud,
+.cloud-small.cloud,
+.cloud-small.normal-cloud,
+.cloud-small.rainy-cloud,
+.cloud-small.snowy-cloud {
+  transform: scale(0.5);
+}
+
+.cloud-medium .cloud,
+.cloud-medium.cloud,
+.cloud-medium.normal-cloud,
+.cloud-medium.rainy-cloud,
+.cloud-medium.snowy-cloud {
+  transform: scale(0.75);
+}
+
+.cloud-large .cloud,
+.cloud-large.cloud,
+.cloud-large.normal-cloud,
+.cloud-large.rainy-cloud,
+.cloud-large.snowy-cloud {
+  transform: scale(1);
+}
+
+/* Weather-specific visibility */
+body.weather-clear .cloud-decoration,
+body.weather-foggy .cloud-decoration,
+body.weather-thunder .cloud-decoration {
+  opacity: 0;
+  /* Pause animation when clouds are invisible to save resources */
+  animation-play-state: paused;
+}
+
+body.weather-partly-cloudy .normal-cloud {
+  opacity: 0.6;
+}
+
+body.weather-cloudy .normal-cloud {
+  opacity: 0.8;
+}
+
+body.weather-rainy .normal-cloud {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+body.weather-rainy .rainy-cloud {
+  opacity: 0.9;
+}
+
+body.weather-snowy .normal-cloud,
+body.weather-snowy .rainy-cloud {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+body.weather-snowy .snowy-cloud {
+  opacity: 0.9;
+}
+
+/* Reduce animation on lower-power devices */
+@media (prefers-reduced-motion: reduce) {
+  .cloud-decoration {
+    animation-duration: 240s !important;
+  }
+}
+

@@ -103,10 +103,32 @@ body {
   width: 100%;
   max-width: 1500px;
   box-shadow: 0 12px 48px var(--shadow-color);
-  margin-top: 80px;
+  margin-top: 30px;
   border: 1px solid var(--border-color);
   overflow: hidden;
   background-color: rgba(30, 40, 70, 0.25);
+}
+
+/* Time display in top right corner */
+.top-right-time {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.top-right-time .current-time {
+  font-size: 1.3rem;
+  color: var(--text-color);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(30, 40, 70, 0.6);
+  padding: 0.5rem 1.2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  backdrop-filter: var(--glass-effect);
+  border: 1px solid var(--border-color);
 }
 
 /* District Info - Highlighted as requested */
@@ -366,104 +388,106 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
   .weather-container {
-    padding: 1rem;
+    padding: 1.5rem;
+    margin-top: 20px;
   }
-
+  
   .district-info {
     font-size: 0.9rem;
-    padding: 0.7rem 1rem;
+    padding: 0.6rem 1rem;
   }
-
+  
   .weather-header {
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
   }
-
+  
   .location {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
-
+  
   .temperature {
-    font-size: 1.8rem;
-    text-align: center;
+    font-size: 2.5rem;
   }
-
+  
   .current-time {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
   }
-
+  
   .weather-details {
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.8rem;
+    gap: 0.8rem;
+    align-items: flex-start;
+  }
+  
+  .weather-details span {
     font-size: 0.9rem;
   }
-
-  /* For mobile, we need to allow scrolling since the forecasts won't fit */
+  
   .forecast-container {
     overflow-x: auto;
+    padding-bottom: 1rem;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    padding-bottom: 1rem;
   }
-
+  
   .forecast-container::-webkit-scrollbar {
     height: 4px;
-    display: block;
-  }
-
-  .forecast-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
-    display: block;
   }
-
+  
+  .forecast-container::-webkit-scrollbar-track {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin: 0 20px;
+  }
+  
   .forecast-container::-webkit-scrollbar-thumb {
     background-color: var(--primary-color);
     border-radius: 2px;
-    display: block;
   }
-
+  
   .forecast-day {
     flex: 0 0 auto;
-    min-width: 100px;
-    padding: 0.8rem;
+    width: 100px;
   }
-
+  
   .forecast-day .day-name {
     font-size: 0.9rem;
   }
-
+  
   .forecast-day .forecast-icon {
-    font-size: 1.4rem;
+    height: 50px;
   }
-
+  
   .forecast-day .forecast-desc {
     font-size: 0.75rem;
-    min-height: 1.8rem;
+    white-space: normal;
+    max-width: 100%;
   }
-
+  
   .forecast-day .forecast-temp {
-    font-size: 1rem;
-  }
-
-  .ad-banner {
     font-size: 0.9rem;
-    padding: 0.7rem;
   }
-
+  
+  .ad-banner {
+    padding: 1rem;
+  }
+  
   .ad-banner-full {
-    font-size: 1.2rem;
-    padding: 1rem 0;
+    margin-top: 1.5rem;
   }
-
-  .top-bar-time {
-    position: static;
-    display: block;
-    margin: 0 auto 1rem auto;
-    text-align: center;
+  
+  .top-right-time {
+    top: 15px;
+    right: 15px;
+  }
+  
+  .top-right-time .current-time {
     font-size: 1rem;
     padding: 0.4rem 0.8rem;
   }
@@ -593,33 +617,6 @@ body {
 .forecast-day {
   /* Remove animation */
   animation: none;
-}
-
-.top-bar-time {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0.5rem 2rem;
-  background: rgba(30, 40, 70, 0.6);
-  backdrop-filter: var(--glass-effect);
-  border-bottom: 1px solid var(--border-color);
-  z-index: 1000;
-}
-
-.top-bar-time .current-time {
-  font-size: 1.3rem;
-  color: var(--text-color);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  background: rgba(30, 40, 70, 0.6);
-  padding: 0.5rem 1.2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Cloud effect */
@@ -877,4 +874,175 @@ body {
   100% {
     transform: rotate(0deg); /* No rotation */
   }
+}
+
+/* Weather background styles - Improved color palette */
+#simple-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: linear-gradient(to bottom, #3a7bd5, #3a6073);
+    transition: background 1.5s ease;
+}
+
+/* Clear sky - Day: Bright blue to lighter blue */
+body.weather-clear #simple-background {
+    background: linear-gradient(to bottom, #1e88e5, #90caf9);
+}
+
+/* Clear sky - Night: Deep blue to slightly lighter blue */
+body.weather-clear.night #simple-background {
+    background: linear-gradient(to bottom, #0d47a1, #1a237e);
+}
+
+/* Partly cloudy - Day: Blue with light grey tones */
+body.weather-partly-cloudy #simple-background {
+    background: linear-gradient(to bottom, #42a5f5, #bbdefb);
+}
+
+/* Partly cloudy - Night: Dark blue-grey */
+body.weather-partly-cloudy.night #simple-background {
+    background: linear-gradient(to bottom, #1a237e, #303f9f);
+}
+
+/* Cloudy - Day: Light grey-blue */
+body.weather-cloudy #simple-background {
+    background: linear-gradient(to bottom, #78909c, #cfd8dc);
+}
+
+/* Cloudy - Night: Dark grey-blue */
+body.weather-cloudy.night #simple-background {
+    background: linear-gradient(to bottom, #263238, #455a64);
+}
+
+/* Rainy - Day: Blue-grey */
+body.weather-rainy #simple-background {
+    background: linear-gradient(to bottom, #546e7a, #90a4ae);
+}
+
+/* Rainy - Night: Very dark blue-grey */
+body.weather-rainy.night #simple-background {
+    background: linear-gradient(to bottom, #263238, #37474f);
+}
+
+/* Snowy - Day: Very light blue-grey */
+body.weather-snowy #simple-background {
+    background: linear-gradient(to bottom, #78909c, #eceff1);
+}
+
+/* Snowy - Night: Medium blue-grey */
+body.weather-snowy.night #simple-background {
+    background: linear-gradient(to bottom, #37474f, #546e7a);
+}
+
+/* Foggy - Day: Light grey */
+body.weather-foggy #simple-background {
+    background: linear-gradient(to bottom, #90a4ae, #cfd8dc);
+}
+
+/* Foggy - Night: Dark grey */
+body.weather-foggy.night #simple-background {
+    background: linear-gradient(to bottom, #424242, #616161);
+}
+
+/* Thunder - Day: Dark purple-grey */
+body.weather-thunder #simple-background {
+    background: linear-gradient(to bottom, #303f9f, #3f51b5);
+}
+
+/* Thunder - Night: Very dark purple */
+body.weather-thunder.night #simple-background {
+    background: linear-gradient(to bottom, #1a237e, #283593);
+}
+
+/* Improved rain effect - more subtle and realistic */
+.weather-effect.rain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    background-image: 
+        linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%),
+        linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 100%),
+        linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 100%);
+    background-size: 4px 8px, 5px 10px, 6px 12px;
+    animation: subtle-rain 0.8s linear infinite;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@keyframes subtle-rain {
+    0% {
+        background-position: 0px 0px, 0px 0px, 0px 0px;
+    }
+    100% {
+        background-position: 0px 8px, 0px 10px, 0px 12px;
+    }
+}
+
+/* Improved snow weather effect - more subtle and realistic */
+.weather-effect.snow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    background-image: 
+        radial-gradient(circle at 25% 50%, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+        radial-gradient(circle at 75% 30%, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+        radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gentle-snow 8s linear infinite;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+@keyframes gentle-snow {
+    0% {
+        background-position: 0px 0px, 0px 0px, 0px 0px;
+    }
+    100% {
+        background-position: 40px 40px, 40px 20px, 20px 40px;
+    }
+}
+
+/* Improve snow background colors for better contrast with the effect */
+body.weather-snowy #simple-background {
+    background: linear-gradient(to bottom, #78909c, #eceff1);
+}
+
+body.weather-snowy.night #simple-background {
+    background: linear-gradient(to bottom, #37474f, #546e7a);
+}
+
+.weather-effect.fog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.1) 100%);
+    filter: blur(2px);
+    animation: fog 15s ease infinite;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+@keyframes fog {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
