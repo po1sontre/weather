@@ -25,7 +25,49 @@ const TRANSLATIONS = {
         moonPhase: 'Moon Phase',
         loading: 'Loading weather data...',
         error: 'Error fetching weather data. Please try again later.',
-        districtForecast: 'District Forecast'
+        districtForecast: 'District Forecast',
+        selectCity: 'Select a city',
+        unknown: 'Unknown',
+        unknownDistrict: 'Unknown District',
+        temperature: 'Temperature',
+        forecast: 'Forecast',
+        weatherDetails: 'Weather Details',
+        currentWeather: 'Current Weather',
+        invalidData: 'Invalid station data',
+        yourAdHere: 'Your Ad Here',
+        yourBigAdHere: 'Your Big Ad Here',
+        kmh: 'km/h',
+        day: 'Day',
+        night: 'Night',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'Weather App',
+        direction: 'Direction',
+        pressure: 'Pressure',
+        hPa: 'hPa',
+        visibility: 'Visibility',
+        km: 'km',
+        precipitation: 'Precipitation',
+        mm: 'mm',
+        monday: 'Monday',
+        tuesday: 'Tuesday',
+        wednesday: 'Wednesday',
+        thursday: 'Thursday',
+        friday: 'Friday',
+        saturday: 'Saturday',
+        sunday: 'Sunday',
+        january: 'January',
+        february: 'February',
+        march: 'March',
+        april: 'April',
+        may: 'May',
+        june: 'June',
+        july: 'July',
+        august: 'August',
+        september: 'September',
+        october: 'October',
+        november: 'November',
+        december: 'December'
     },
     de: {
         feelsLike: 'Gefühlt',
@@ -33,8 +75,8 @@ const TRANSLATIONS = {
         humidity: 'Luftfeuchtigkeit',
         rainChance: 'Regenwahrscheinlichkeit',
         today: 'Heute',
-        high: 'Hoch',
-        low: 'Tief',
+        high: 'Höchstwert',
+        low: 'Tiefstwert',
         sunrise: 'Sonnenaufgang',
         sunset: 'Sonnenuntergang',
         uvIndex: 'UV-Index',
@@ -44,7 +86,49 @@ const TRANSLATIONS = {
         moonPhase: 'Mondphase',
         loading: 'Wetterdaten werden geladen...',
         error: 'Fehler beim Laden der Wetterdaten. Bitte versuchen Sie es später erneut.',
-        districtForecast: 'Bezirksvorhersage'
+        districtForecast: 'Bezirksvorhersage',
+        selectCity: 'Stadt auswählen',
+        unknown: 'Unbekannt',
+        unknownDistrict: 'Unbekannter Bezirk',
+        temperature: 'Temperatur',
+        forecast: 'Vorhersage',
+        weatherDetails: 'Wetterdetails',
+        currentWeather: 'Aktuelles Wetter',
+        invalidData: 'Ungültige Stationsdaten',
+        yourAdHere: 'Ihre Werbung Hier',
+        yourBigAdHere: 'Ihre Große Werbung Hier',
+        kmh: 'km/h',
+        day: 'Tag',
+        night: 'Nacht',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'Wetter App',
+        direction: 'Richtung',
+        pressure: 'Luftdruck',
+        hPa: 'hPa',
+        visibility: 'Sichtweite',
+        km: 'km',
+        precipitation: 'Niederschlag',
+        mm: 'mm',
+        monday: 'Montag',
+        tuesday: 'Dienstag',
+        wednesday: 'Mittwoch',
+        thursday: 'Donnerstag',
+        friday: 'Freitag',
+        saturday: 'Samstag',
+        sunday: 'Sonntag',
+        january: 'Januar',
+        february: 'Februar',
+        march: 'März',
+        april: 'April',
+        may: 'Mai',
+        june: 'Juni',
+        july: 'Juli',
+        august: 'August',
+        september: 'September',
+        october: 'Oktober',
+        november: 'November',
+        december: 'Dezember'
     },
     it: {
         feelsLike: 'Percepita',
@@ -63,11 +147,94 @@ const TRANSLATIONS = {
         moonPhase: 'Fase lunare',
         loading: 'Caricamento dati meteo...',
         error: 'Errore nel recupero dei dati meteo. Riprova più tardi.',
-        districtForecast: 'Previsione del distretto'
+        districtForecast: 'Previsione del distretto',
+        selectCity: 'Seleziona una città',
+        unknown: 'Sconosciuto',
+        unknownDistrict: 'Distretto sconosciuto',
+        temperature: 'Temperatura',
+        forecast: 'Previsione',
+        weatherDetails: 'Dettagli meteo',
+        currentWeather: 'Meteo attuale',
+        invalidData: 'Dati della stazione non validi',
+        yourAdHere: 'Il tuo annuncio qui',
+        yourBigAdHere: 'Il tuo grande annuncio qui',
+        kmh: 'km/h',
+        day: 'Giorno',
+        night: 'Notte',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'App Meteo',
+        direction: 'Direzione',
+        pressure: 'Pressione',
+        hPa: 'hPa',
+        visibility: 'Visibilità',
+        km: 'km',
+        precipitation: 'Precipitazioni',
+        mm: 'mm',
+        monday: 'Lunedì',
+        tuesday: 'Martedì',
+        wednesday: 'Mercoledì',
+        thursday: 'Giovedì',
+        friday: 'Venerdì',
+        saturday: 'Sabato',
+        sunday: 'Domenica',
+        january: 'Gennaio',
+        february: 'Febbraio',
+        march: 'Marzo',
+        april: 'Aprile',
+        may: 'Maggio',
+        june: 'Giugno',
+        july: 'Luglio',
+        august: 'Agosto',
+        september: 'Settembre',
+        october: 'Ottobre',
+        november: 'Novembre',
+        december: 'Dicembre'
     }
 };
 
-// Current language
+// Function to get URL parameters
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+}
+
+// Initialize language from URL parameter or use default
+function initializeLanguage() {
+    const langParam = getUrlParameter('lang');
+    if (langParam && ['en', 'de', 'it'].includes(langParam)) {
+        currentLang = langParam;
+        document.documentElement.lang = langParam;
+    }
+    
+    // Update page title and ad banner text with translations
+    updatePageTranslations();
+    
+    // Set active class on the corresponding language button
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            const btnLang = btn.textContent.toLowerCase();
+            btn.classList.toggle('active', btnLang === currentLang);
+        });
+    });
+}
+
+// Function to update all text elements with translations
+function updatePageTranslations() {
+    // Update page title
+    document.getElementById('page-title').textContent = TRANSLATIONS[currentLang].weatherApp;
+    
+    // Update ad banners
+    const adBanner = document.getElementById('ad-banner');
+    if (adBanner) adBanner.textContent = TRANSLATIONS[currentLang].yourAdHere;
+    
+    const bigAdBanner = document.getElementById('big-ad-banner');
+    if (bigAdBanner) bigAdBanner.textContent = TRANSLATIONS[currentLang].yourBigAdHere;
+}
+
+// Current language - will be updated by initializeLanguage()
 let currentLang = 'en';
 
 // Function to get district ID for a city
@@ -132,19 +299,11 @@ async function getDistrictNameById(districtId) {
     try {
         const response = await fetch(`https://api-weather.services.siag.it/api/v2/district/${districtId}/bulletin`);
         const data = await response.json();
-        return data.district?.name || 'Unknown District';
+        return data.district?.name || TRANSLATIONS[currentLang].unknownDistrict;
     } catch (error) {
         console.error('Error getting district name:', error);
-        return 'Unknown District';
+        return TRANSLATIONS[currentLang].unknownDistrict;
     }
-}
-
-// Function to get URL parameters
-function getUrlParameter(name) {
-    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-    const results = regex.exec(location.search);
-    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
 // Function to get weather description from WMO code
@@ -227,8 +386,22 @@ function getMoonPhaseIcon(phase) {
 
 // Function to change language
 function changeLanguage(lang) {
+    if (!['en', 'de', 'it'].includes(lang)) {
+        return;
+    }
+    
     currentLang = lang;
     document.documentElement.lang = lang;
+    
+    // Update URL with the new language
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', lang);
+    window.history.replaceState({}, '', url);
+    
+    // Update UI elements with new translations
+    updatePageTranslations();
+    
+    // Update weather data with new language
     fetchWeatherData();
 }
 
@@ -256,11 +429,9 @@ function displayWeather(locationName, weatherData) {
     document.querySelector('.feels-like').textContent = 
         `${TRANSLATIONS[currentLang].feelsLike}: ${Math.round(weatherData.current_weather.temperature)}°C`;
     
-    const weatherIcon = document.querySelector('.weather-icon');
-    weatherIcon.className = `weather-icon ${getWeatherIcon(weatherData.current_weather.weathercode)}`;
-    
-    document.querySelector('.description').textContent = 
-        getWeatherDescription(weatherData.current_weather.weathercode, currentLang);
+    // Set the weather icon using standardized code
+    const wmoCode = standardizeWeatherCode(weatherData.current_weather.weathercode);
+    setWeatherIcon(wmoCode);
     
     // Update wind information
     document.querySelector('.wind-speed').textContent = 
@@ -358,20 +529,69 @@ async function getLocationName(lat, lng) {
     }
 }
 
+// Function to standardize weather codes from various sources to our WMO-based system
+function standardizeWeatherCode(code, desc = '') {
+    // Convert SIAG codes or descriptions to standardized WMO codes
+    if (typeof code === 'string') {
+        // Handle SIAG letter codes
+        if (code === 'b') return 0;  // clear/sunny
+        if (code === 'c') return 2;  // partly cloudy
+        if (code === 'd') return 3;  // overcast/cloudy
+        if (code === 'f') return 61; // rain
+        if (code === 'g') return 71; // snow
+        if (code === 'h') return 45; // fog
+        if (code === 'i') return 95; // thunderstorm
+    }
+    
+    // If we have a description but not a code, try to determine from the description
+    // Use regex with i flag for case-insensitive matching
+    // And include matches for English, German, and Italian terms
+    if (desc) {
+        // Clear/Sunny
+        if (/sun|clear|klar|heiter|sereno|soleggiato/i.test(desc)) {
+            return 0;
+        }
+        // Partly Cloudy - specifically check for "partly" or partial terms first
+        if (/partly cloud|teilweise bewölkt|parzialmente nuvoloso|partly sunny|teilweise sonnig|parzialmente soleggiato/i.test(desc)) {
+            return 2;
+        }
+        // Fully Cloudy/Overcast - check after partly cloudy to avoid overmatching
+        if (/cloud|bewölkt|nuvoloso|overcast|bedeckt|coperto/i.test(desc)) {
+            return 3;
+        }
+        // Rain
+        if (/rain|regen|pioggia/i.test(desc)) {
+            return 61;
+        }
+        // Snow
+        if (/snow|schnee|neve/i.test(desc)) {
+            return 71;
+        }
+        // Fog
+        if (/fog|nebel|nebbia/i.test(desc)) {
+            return 45;
+        }
+        // Thunderstorm
+        if (/thunder|gewitter|temporale/i.test(desc)) {
+            return 95;
+        }
+    }
+    
+    // If we have a numeric code, use it directly if it's a valid WMO code
+    if (typeof code === 'number' && Object.keys(getSkyconTypeAndColor).includes(code.toString())) {
+        return code;
+    }
+    
+    // Default to partly cloudy if we can't determine
+    return 2;
+}
+
 // Main function to fetch and process weather data
 async function fetchWeatherData() {
     try {
-        // Get language from URL or default
-        const langParam = getUrlParameter('lang')?.toLowerCase();
-        const lang = ['de', 'it', 'en'].includes(langParam) ? langParam : 'de';
-        currentLang = lang;
-        document.documentElement.lang = lang;
+        // Use the currentLang that was initialized from URL or default
+        const lang = currentLang;
         
-        // Highlight active language button
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
-        });
-
         // Check for station or city in URL
         const stationParam = getUrlParameter('station');
         const cityParam = getUrlParameter('city');
@@ -423,6 +643,14 @@ async function fetchWeatherData() {
         const forecastData = await forecastRes.json();
         
         if (forecastData.forecasts && forecastElem) {
+            // First remove any existing forecast icons to prevent duplicates
+            for (let i = 0; i < 7; i++) {
+                const iconId = `forecast-icon-${i}`;
+                Object.values(skycons).forEach(skycon => {
+                    skycon.remove(iconId);
+                });
+            }
+            
             for (let i = 0; i < forecastData.forecasts.length; i++) {
                 const day = forecastData.forecasts[i];
                 const date = new Date(day.date);
@@ -431,16 +659,39 @@ async function fetchWeatherData() {
                 const desc = day.symbol?.description || '';
                 const tempMax = day.temperatureMax;
                 const tempMin = day.temperatureMin;
-                const iconClass = getForecastIconClass(code, desc);
+                const iconId = `forecast-icon-${i}`;
+                
+                // Create forecast day element
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'forecast-day';
                 dayDiv.innerHTML = `
                     <div class="day-name">${dayName}</div>
-                    <i class="forecast-icon ${iconClass}"></i>
+                    <div class="forecast-icon">
+                        <canvas id="${iconId}" width="64" height="64"></canvas>
+                    </div>
                     <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
                     <div class="forecast-desc">${desc}</div>
                 `;
                 forecastElem.appendChild(dayDiv);
+                
+                // Set the weather icon using the standardized code
+                const wmoCode = standardizeWeatherCode(code, desc);
+                
+                console.log(`Forecast day ${i}: ${dayName}, code: ${code} → ${wmoCode}, desc: ${desc}`);
+                
+                // Use setTimeout to ensure the canvas element is properly rendered before adding the icon
+                setTimeout(() => {
+                    const iconElement = document.getElementById(iconId);
+                    if (iconElement) {
+                        const { type, color } = getSkyconTypeAndColor(wmoCode);
+                        // Add icon with appropriate color
+                        skycons[color].add(iconId, type);
+                        skycons[color].play(); // Ensure animation is running
+                        console.log(`Added forecast icon ${iconId} with type ${type} and color ${color}`);
+                    } else {
+                        console.error(`Could not find element with ID: ${iconId}`);
+                    }
+                }, 100);
             }
         }
         // If no city/station/lat-lng, show nothing or a message
@@ -456,6 +707,9 @@ async function fetchWeatherData() {
             if (forecastElem) forecastElem.innerHTML = '';
             updateCurrentTime();
         }
+
+        // Update ad text with current language
+        updatePageTranslations();
     } catch (error) {
         displayError(TRANSLATIONS[currentLang]?.error || 'Error fetching weather data. Please try again later.');
         console.error('Error:', error);
@@ -510,7 +764,7 @@ async function populateCityDropdown() {
         // Update the dropdown
         const citySelect = document.getElementById('city-select');
         if (citySelect) {
-            citySelect.innerHTML = '<option value="">Select a city</option>';
+            citySelect.innerHTML = `<option value="">${TRANSLATIONS[currentLang].selectCity}</option>`;
             uniqueStations.forEach(station => {
                 const option = document.createElement('option');
                 option.value = station.cleanName;
@@ -523,12 +777,107 @@ async function populateCityDropdown() {
     }
 }
 
+// Create multiple skycons objects with different colors
+let skycons = {};
+const ICON_COLORS = {
+    sun: "#FFD700",     // Gold/yellow for sun
+    cloud: "#FFFFFF",   // White for clouds
+    rain: "#A4B0BE",    // Blue-gray for rain
+    snow: "#FFFFFF",    // White for snow
+    fog: "#DADADA",     // Light gray for fog
+    thunder: "#F1C40F", // Yellow for lightning
+    default: "#FFFFFF"  // White as default
+};
+
+// Initialize Skycons when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize different colored skycons
+    skycons = {
+        sun: new Skycons({ "color": ICON_COLORS.sun, "resizeClear": true }),
+        cloud: new Skycons({ "color": ICON_COLORS.cloud, "resizeClear": true }),
+        rain: new Skycons({ "color": ICON_COLORS.rain, "resizeClear": true }),
+        snow: new Skycons({ "color": ICON_COLORS.snow, "resizeClear": true }),
+        fog: new Skycons({ "color": ICON_COLORS.fog, "resizeClear": true }),
+        thunder: new Skycons({ "color": ICON_COLORS.thunder, "resizeClear": true }),
+        default: new Skycons({ "color": ICON_COLORS.default, "resizeClear": true })
+    };
+    
+    // Start all animations
+    Object.values(skycons).forEach(skycon => {
+        skycon.play();
+    });
+    
+    console.log("Skycons initialized with natural colors");
+    
+    initializeLanguage();
+    populateCityDropdown();
+    fetchWeatherData();
+});
+
+// Function to map weather codes to Skycons types and colors
+function getSkyconTypeAndColor(code) {
+    // Skycons types: CLEAR_DAY, CLEAR_NIGHT, PARTLY_CLOUDY_DAY, PARTLY_CLOUDY_NIGHT, 
+    // CLOUDY, RAIN, SLEET, SNOW, WIND, FOG
+    
+    // Map codes to icon types and appropriate colors
+    const mapping = {
+        0: { type: Skycons.CLEAR_DAY, color: 'sun' },           // Clear sky
+        1: { type: Skycons.PARTLY_CLOUDY_DAY, color: 'cloud' }, // Mainly clear
+        2: { type: Skycons.PARTLY_CLOUDY_DAY, color: 'cloud' }, // Partly cloudy
+        3: { type: Skycons.CLOUDY, color: 'cloud' },            // Overcast
+        45: { type: Skycons.FOG, color: 'fog' },                // Foggy
+        48: { type: Skycons.FOG, color: 'fog' },                // Depositing rime fog
+        51: { type: Skycons.RAIN, color: 'rain' },              // Light drizzle
+        53: { type: Skycons.RAIN, color: 'rain' },              // Moderate drizzle
+        55: { type: Skycons.RAIN, color: 'rain' },              // Dense drizzle
+        61: { type: Skycons.RAIN, color: 'rain' },              // Slight rain
+        63: { type: Skycons.RAIN, color: 'rain' },              // Moderate rain
+        65: { type: Skycons.RAIN, color: 'rain' },              // Heavy rain
+        71: { type: Skycons.SNOW, color: 'snow' },              // Slight snow
+        73: { type: Skycons.SNOW, color: 'snow' },              // Moderate snow
+        75: { type: Skycons.SNOW, color: 'snow' },              // Heavy snow
+        77: { type: Skycons.SNOW, color: 'snow' },              // Snow grains
+        80: { type: Skycons.RAIN, color: 'rain' },              // Slight rain showers
+        81: { type: Skycons.RAIN, color: 'rain' },              // Moderate rain showers
+        82: { type: Skycons.RAIN, color: 'rain' },              // Violent rain showers
+        85: { type: Skycons.SNOW, color: 'snow' },              // Slight snow showers
+        86: { type: Skycons.SNOW, color: 'snow' },              // Heavy snow showers
+        95: { type: Skycons.RAIN, color: 'thunder' },           // Thunderstorm
+        96: { type: Skycons.SLEET, color: 'thunder' },          // Thunderstorm with slight hail
+        99: { type: Skycons.SLEET, color: 'thunder' }           // Thunderstorm with heavy hail
+    };
+    
+    return mapping[code] || { type: Skycons.CLOUDY, color: 'default' };
+}
+
+// Function to set the skycon based on weather code
+function setWeatherIcon(code) {
+    console.log(`Setting weather icon for code: ${code}`);
+    
+    // Ensure code is a number and has a valid mapping
+    const numericCode = parseInt(code, 10) || 2; // Default to partly cloudy (2) if parsing fails
+    const { type, color } = getSkyconTypeAndColor(numericCode);
+    
+    console.log(`Using icon type: ${type} with color: ${color}`);
+    
+    // Clear any existing icon before setting new one
+    Object.values(skycons).forEach(skycon => {
+        skycon.remove("current-icon");
+    });
+    
+    // Add the icon with appropriate color
+    skycons[color].add("current-icon", type);
+    skycons[color].play(); // Ensure animation is running
+}
+
 // Update the displayStationWeather function to handle missing data
 function displayStationWeather(station) {
     if (!isValidStation(station)) {
-        displayError(TRANSLATIONS[currentLang]?.error || 'Invalid station data');
+        displayError(TRANSLATIONS[currentLang]?.invalidData || 'Invalid station data');
         return;
     }
+
+    console.log("Station data:", station);
 
     // Location
     const locElem = document.querySelector('.location');
@@ -538,15 +887,48 @@ function displayStationWeather(station) {
     const tempElem = document.querySelector('.temperature');
     if (tempElem) tempElem.textContent = `${Math.round(station.t)}°C`;
 
+    // Determine weather condition and set weather icon
+    let weatherInfo = "";
+    if (station.description) {
+        weatherInfo = station.description;
+    }
+    
+    // Get weather code using standardization function
+    let weatherCode;
+    if (station.weatherCode !== undefined) {
+        weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
+    } else {
+        // If no weather code, determine from station data
+        const temp = station.t;
+        const humidity = station.rh;
+        
+        if (temp > 25 && humidity < 50) {
+            weatherCode = 0; // Clear sky/sunny for hot and dry
+        } else if (temp < 5) {
+            weatherCode = 71; // Light snow for cold
+        } else if (humidity > 80) {
+            weatherCode = 61; // Light rain for high humidity
+        } else if (humidity > 60) {
+            weatherCode = 3; // Overcast for medium-high humidity
+        } else if (humidity > 40) {
+            weatherCode = 2; // Partly cloudy for medium humidity
+        } else {
+            weatherCode = 1; // Mainly clear for low humidity
+        }
+    }
+    
+    console.log(`Determined weather code: ${weatherCode}`);
+    setWeatherIcon(weatherCode);
+
     // Humidity
     const humidityElem = document.querySelector('.humidity');
-    if (humidityElem) humidityElem.textContent = station.rh ? `Humidity: ${Math.round(station.rh)}%` : '';
+    if (humidityElem) humidityElem.textContent = station.rh ? `${TRANSLATIONS[currentLang].humidity}: ${Math.round(station.rh)}%` : '';
 
     // Wind
     const windElem = document.querySelector('.wind');
     if (windElem) {
         const windText = station.ff ? 
-            `Wind: ${Math.round(station.ff)} km/h ${station.dd || ''}` : 
+            `${TRANSLATIONS[currentLang].wind}: ${Math.round(station.ff)} ${TRANSLATIONS[currentLang].kmh} ${station.dd || ''}` : 
             '';
         windElem.textContent = windText;
     }
@@ -558,20 +940,21 @@ function displayStationWeather(station) {
     updateCurrentTime();
 }
 
-// Call populateCityDropdown when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    populateCityDropdown();
-    fetchWeatherData();
-});
-
 // Auto-refresh every 15 minutes
 setInterval(fetchWeatherData, 15 * 60 * 1000);
 
 function updateCurrentTime() {
-    const timeElem = document.querySelector('.current-time');
-    if (timeElem) {
+    // Update the top bar time (if present)
+    const topBarTime = document.querySelector('.top-bar-time .current-time');
+    if (topBarTime) {
         const now = new Date();
-        timeElem.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        topBarTime.textContent = now.toLocaleTimeString(currentLang, {hour: '2-digit', minute:'2-digit'});
+    }
+    // Update the card's .current-time (if present)
+    const cardTime = document.querySelector('.location-header .current-time');
+    if (cardTime) {
+        const now = new Date();
+        cardTime.textContent = now.toLocaleDateString(currentLang, { weekday: 'long', month: 'long', day: 'numeric' });
     }
 }
 
@@ -579,15 +962,23 @@ function updateCurrentTime() {
 setInterval(updateCurrentTime, 60000);
 
 function getForecastIconClass(code, desc) {
-    // Map SIAG code or description to Font Awesome icon class
-    // Codes: b=Heiter, c=Wolkig, d=Bedeckt, f=Wolkig, mäßiger Regen, etc.
-    if (code === 'b' || /heiter/i.test(desc)) return 'fa-solid fa-sun';
-    if (code === 'c' || /wolkig/i.test(desc)) return 'fa-solid fa-cloud-sun';
-    if (code === 'd' || /bedeckt/i.test(desc)) return 'fa-solid fa-cloud';
-    if (code === 'f' || /regen/i.test(desc)) return 'fa-solid fa-cloud-showers-heavy';
-    if (/schnee|snow/i.test(desc)) return 'fa-solid fa-snowflake';
-    if (/gewitter|thunder/i.test(desc)) return 'fa-solid fa-bolt';
-    return 'fa-solid fa-question';
+    // Use our standardization function first
+    const wmoCode = standardizeWeatherCode(code, desc);
+    
+    // Then convert to appropriate icon class
+    if (wmoCode === 0) return 'fa-solid fa-sun';              // Clear/sunny
+    if (wmoCode === 1) return 'fa-solid fa-sun';              // Mainly clear
+    if (wmoCode === 2) return 'fa-solid fa-cloud-sun';        // Partly cloudy
+    if (wmoCode === 3) return 'fa-solid fa-cloud';            // Overcast/cloudy
+    if (wmoCode === 45 || wmoCode === 48) return 'fa-solid fa-smog'; // Fog
+    if (wmoCode >= 51 && wmoCode <= 65) return 'fa-solid fa-cloud-rain'; // Rain
+    if (wmoCode >= 71 && wmoCode <= 77) return 'fa-solid fa-snowflake'; // Snow
+    if (wmoCode >= 80 && wmoCode <= 82) return 'fa-solid fa-cloud-showers-heavy'; // Rain showers
+    if (wmoCode >= 85 && wmoCode <= 86) return 'fa-solid fa-snowflake'; // Snow showers
+    if (wmoCode >= 95) return 'fa-solid fa-bolt'; // Thunderstorm
+    
+    // Fallback to default
+    return 'fa-solid fa-cloud';
 } 
 
 
