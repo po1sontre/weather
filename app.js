@@ -809,24 +809,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log("Skycons initialized with natural colors");
     
-    // Fix generator link
-    const generatorLink = document.getElementById('generator-link');
-    if (generatorLink) {
-        // Get current base URL
-        let baseUrl = window.location.href.split('/index.html')[0];
-        
-        // If we're on any other path, extract just the base
-        if (baseUrl.includes('?')) {
-            baseUrl = baseUrl.split('?')[0];
-        }
-        
-        // Remove any trailing slashes
-        baseUrl = baseUrl.replace(/\/$/, '');
-        
-        // Set the link to the generator page
-        generatorLink.href = `${baseUrl}/gen.html`;
-    }
-    
     initializeLanguage();
     populateCityDropdown();
     fetchWeatherData();
