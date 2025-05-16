@@ -35,7 +35,7 @@ const TRANSLATIONS = {
         currentWeather: 'Current Weather',
         invalidData: 'Invalid station data',
         yourAdHere: 'Your Ad Here',
-        yourBigAdHere: 'Your Big Ad Here',
+        yourBigAdHere: 'SOUTH TYROL WEATHER - ADVERTISEMENT SPACE AVAILABLE',
         kmh: 'km/h',
         day: 'Day',
         night: 'Night',
@@ -96,7 +96,7 @@ const TRANSLATIONS = {
         currentWeather: 'Aktuelles Wetter',
         invalidData: 'Ungültige Stationsdaten',
         yourAdHere: 'Ihre Werbung Hier',
-        yourBigAdHere: 'Ihre Große Werbung Hier',
+        yourBigAdHere: 'SÜDTIROL WETTER - WERBEFLÄCHE VERFÜGBAR',
         kmh: 'km/h',
         day: 'Tag',
         night: 'Nacht',
@@ -157,7 +157,7 @@ const TRANSLATIONS = {
         currentWeather: 'Meteo attuale',
         invalidData: 'Dati della stazione non validi',
         yourAdHere: 'Il tuo annuncio qui',
-        yourBigAdHere: 'Il tuo grande annuncio qui',
+        yourBigAdHere: 'METEO ALTO ADIGE - SPAZIO PUBBLICITARIO DISPONIBILE',
         kmh: 'km/h',
         day: 'Giorno',
         night: 'Notte',
@@ -240,10 +240,7 @@ function updatePageTranslations() {
     // Update page title
     document.getElementById('page-title').textContent = TRANSLATIONS[currentLang].weatherApp;
     
-    // Update ad banners
-    const adBanner = document.getElementById('ad-banner');
-    if (adBanner) adBanner.textContent = TRANSLATIONS[currentLang].yourAdHere;
-    
+    // Update big ad banner with translation
     const bigAdBanner = document.getElementById('big-ad-banner');
     if (bigAdBanner) bigAdBanner.textContent = TRANSLATIONS[currentLang].yourBigAdHere;
 }
@@ -1757,12 +1754,49 @@ function setCurrentWeatherCode(code) {
     }, 500);
 }
 
-// Initialize the videos for better TV compatibility
+// Add this function to detect the Lunixo app
+function isLunixoApp() {
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('lunixo') || 
+           ua.includes('tv') || 
+           ua.includes('tizen') || 
+           ua.includes('webos') || 
+           window.location.search.includes('lunixo');
+}
+
+// Enhanced video initialization for Lunixo TV app
 function initializeVideos() {
     console.log('Initializing videos for TV compatibility');
     
     // Get all videos
     const videos = document.querySelectorAll('.weather-video');
+    
+    // Special handling for Lunixo app
+    const isLunixo = isLunixoApp();
+    if (isLunixo) {
+        console.log('Lunixo TV app detected - applying special video handling');
+        
+        // Set a flag in sessionStorage to track refresh state
+        if (!sessionStorage.getItem('lunixo_refresh_count')) {
+            sessionStorage.setItem('lunixo_refresh_count', '1');
+        } else {
+            const count = parseInt(sessionStorage.getItem('lunixo_refresh_count')) + 1;
+            sessionStorage.setItem('lunixo_refresh_count', count.toString());
+            console.log('Lunixo refresh count:', count);
+        }
+        
+        // Set a periodic check to ensure videos are playing
+        setInterval(() => {
+            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+            if (activeVideo && activeVideo.paused) {
+                console.log('Video paused after refresh - attempting to restart');
+                activeVideo.play().catch(e => console.warn('Auto-play after refresh failed:', e));
+            }
+        }, 5000);
+        
+        // Apply Lunixo-specific optimizations
+        document.body.classList.add('lunixo-app');
+    }
     
     videos.forEach(video => {
         // Ensure videos have the right attributes
@@ -1772,10 +1806,31 @@ function initializeVideos() {
         video.setAttribute('playsinline', '');
         video.muted = true;
         
-        // Add an error handler
-        video.addEventListener('error', (e) => {
-            console.error(`Error loading video ${video.id}:`, e);
-        });
+        // Add special error recovery for Lunixo
+        if (isLunixo) {
+            video.addEventListener('error', (e) => {
+                console.error(`Error loading video ${video.id}:`, e);
+                
+                // Try to reload the video source after an error
+                const source = video.querySelector('source');
+                if (source) {
+                    const currentSrc = source.src;
+                    // Force video reload
+                    setTimeout(() => {
+                        source.src = currentSrc + '?t=' + new Date().getTime();
+                        video.load();
+                        if (video.style.display === 'block') {
+                            video.play().catch(e => console.warn('Reload play failed:', e));
+                        }
+                    }, 1000);
+                }
+            });
+        } else {
+            // Standard error handler
+            video.addEventListener('error', (e) => {
+                console.error(`Error loading video ${video.id}:`, e);
+            });
+        }
         
         // Try to preload the video
         try {
@@ -1799,6 +1854,32 @@ function initializeVideos() {
             activeVideo.play().catch(e => console.warn('Play after click failed:', e));
         }
     });
+    
+    // For Lunixo, add a touchstart listener as well (some TV browsers need this)
+    if (isLunixo) {
+        document.addEventListener('touchstart', () => {
+            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+            if (activeVideo && activeVideo.paused) {
+                console.log('Touch interaction detected, playing active video');
+                activeVideo.play().catch(e => console.warn('Play after touch failed:', e));
+            }
+        });
+        
+        // Add visibilitychange handler for Lunixo app
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('Page visibility restored - checking videos');
+                setTimeout(() => {
+                    const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+                    if (activeVideo) {
+                        // Force reload the video
+                        activeVideo.load();
+                        activeVideo.play().catch(e => console.warn('Visibility play failed:', e));
+                    }
+                }, 500);
+            }
+        });
+    }
 }
 
 // Initialize the app with optimized settings

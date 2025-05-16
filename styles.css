@@ -17,9 +17,9 @@
 }
 
 :root {
-  --primary-color: #ff69b4; /* Hot pink */
-  --primary-light: #ff8dc7;
-  --primary-dark: #d4408f;
+  --primary-color: #e6027f; /* Updated hot pink */
+  --primary-light: #ff53a6;
+  --primary-dark: #c00068;
   --text-color: #ffffff;
   --background-dark: #0a2a5e; /* Dark blue */
   --background-light: #1e56a0; /* Medium blue */
@@ -348,47 +348,40 @@ body {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
-/* Ad Banners */
-.ad-banner {
-  width: 100%;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  color: white;
-  text-align: center;
-  font-size: 1.1rem; /* Reduced from 2.2rem */
-  font-weight: 700;
-  padding: 0.8rem; /* Reduced from 1.8rem */
-  border-radius: 12px;
-  margin-top: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  letter-spacing: 1px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Remove shimmer animation from ad banner */
-.ad-banner::before {
-  display: none;
-}
-
+/* Enhanced Big Ad Banner */
 .ad-banner-full {
   width: 100%;
   max-width: 100%;
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
   text-align: center;
-  font-size: 1.5rem; /* Reduced from 3rem */
+  font-size: 2rem; /* Increased from 1.5rem */
   font-weight: 800;
-  padding: 1.2rem 0; /* Reduced from 3rem */
-  margin-top: 1.5rem;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  padding: 1.8rem 0; /* Increased from 1.2rem */
+  margin-top: 2rem; /* Increased from 1.5rem */
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); /* Enhanced shadow */
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
+  border-radius: 0; /* Full width banner */
+  transition: all 0.3s ease;
 }
 
-/* Remove shimmer animation from full ad banner */
-.ad-banner-full::before {
-  display: none;
+/* Media queries for the big ad banner */
+@media (min-width: 1200px) {
+  .ad-banner-full {
+    font-size: 2.5rem;
+    padding: 2rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .ad-banner-full {
+    font-size: 1.6rem;
+    padding: 1.5rem 0;
+    margin-top: 1.5rem;
+  }
 }
 
 /* Responsive Design */
@@ -478,14 +471,6 @@ body {
   
   .forecast-day .forecast-temp {
     font-size: 0.9rem;
-  }
-  
-  .ad-banner {
-    padding: 1rem;
-  }
-  
-  .ad-banner-full {
-    margin-top: 1.5rem;
   }
   
   .top-right-time {
@@ -1217,4 +1202,33 @@ canvas {
     image-rendering: optimize-contrast;
     image-rendering: pixelated;
     -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Lunixo TV App specific optimizations */
+.lunixo-app video {
+    /* Force hardware acceleration for better Lunixo compatibility */
+    transform: translateZ(0) !important;
+    will-change: transform, opacity !important;
+    backface-visibility: hidden !important;
+    perspective: 1000px !important;
+}
+
+.lunixo-app .weather-video {
+    /* Additional optimizations for Lunixo app which needs stronger display handling */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: -1 !important;
+}
+
+/* Force display of selected videos in Lunixo - needed after refresh */
+.lunixo-app.weather-clear #video-clearsky,
+.lunixo-app.weather-partly-cloudy #video-partly-cloudy,
+.lunixo-app.weather-rainy #video-rain,
+.lunixo-app.weather-snowy #video-snow,
+.lunixo-app.weather-thunder #video-thunder {
+    display: block !important;
+    opacity: 1 !important;
 }
