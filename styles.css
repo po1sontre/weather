@@ -916,30 +916,11 @@ body {
     transition: opacity 1.5s ease;
     pointer-events: none;
     transform: translateZ(0); /* Hardware acceleration for better performance */
-    will-change: opacity, transform; /* Hint for browser optimization */
+    will-change: opacity; /* Hint for browser optimization */
     display: none; /* Initially hidden, will be made visible in JS */
-    
-    /* Additional optimizations for video playback */
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    -webkit-transform: translate3d(0,0,0);
-    
-    /* Improved transitions for video loops */
-    transition: opacity 1.2s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-/* Special styles for video reversing */
-.weather-video.reversing {
-    /* Subtle effect for reverse playback to make it smoother */
-    filter: brightness(0.98);
-}
-
-/* Video smooth transitions between frames during seeking */
-.weather-video.seeking {
-    filter: brightness(0.9);
-}
-
-/* Video background visibility classes for each weather condition - optimized rendering */
+/* Video background visibility classes for each weather condition */
 body.weather-clear #video-clearsky {
     opacity: 0.9;
     display: block;

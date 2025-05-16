@@ -1217,18 +1217,62 @@ function setWeatherBackground(code) {
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Update videos for current weather condition
-    updateWeatherVideos(activeVideoId, isNight);
-    
     // Handle all video backgrounds
     const allVideos = document.querySelectorAll('.weather-video');
     if (allVideos.length > 0) {
+        // First pause all videos
+        allVideos.forEach(video => {
+            if (video.id !== activeVideoId) {
+                video.pause();
+            }
+        });
+        
         // Remove cloud decorations when using video background
         if (useVideoBackground) {
             const cloudContainer = document.getElementById('cloud-decorations-container');
             if (cloudContainer) {
                 cloudContainer.innerHTML = ''; // Clear any existing clouds
                 cloudContainer.style.display = 'none'; // Hide the container
+            }
+            
+            // Handle the active video
+            const activeVideo = document.getElementById(activeVideoId);
+            if (activeVideo) {
+                // For precipitation video that has day/night sections
+                if (activeVideoId === 'video-precipitation') {
+                    // Set video current time based on day/night
+                    // Day footage is in the first half, night footage in the second half
+                    
+                    // Get video duration and set appropriate timestamp
+                    activeVideo.addEventListener('loadedmetadata', function() {
+                        const duration = activeVideo.duration;
+                        // If it's night, jump to the night section of the video
+                        if (isNight) {
+                            // For night, use the second half of the video
+                            const jumpToTime = (duration / 2) + (duration / 6);
+                            activeVideo.currentTime = jumpToTime;
+                        } else {
+                            // For day, use the first part of the video
+                            const jumpToTime = duration / 6;
+                            activeVideo.currentTime = jumpToTime;
+                        }
+                        activeVideo.play();
+                    });
+                    
+                    // In case the video is already loaded
+                    if (activeVideo.duration) {
+                        const duration = activeVideo.duration;
+                        if (isNight && activeVideoId === 'video-precipitation') {
+                            activeVideo.currentTime = (duration / 2) + (duration / 6);
+                        } else {
+                            activeVideo.currentTime = duration / 6;
+                        }
+                        activeVideo.play();
+                    }
+                } else {
+                    // For standard daytime videos, just play them
+                    activeVideo.play();
+                }
             }
         } else {
             // Re-show cloud container for non-video weather conditions
@@ -1305,100 +1349,6 @@ function setWeatherBackground(code) {
     } else if (useVideoBackground) {
         console.log('Using video background - skipping cloud decorations');
     }
-}
-
-// Helper function to check if it's night time
-function isNightTime() {
-    const hour = new Date().getHours();
-    return hour < 6 || hour >= 19;
-}
-
-// Enhanced function to update weather videos with specific active video ID
-function updateWeatherVideos(activeVideoId, isNight) {
-    const videos = document.querySelectorAll('.weather-video');
-    
-    videos.forEach(video => {
-        // Stop any existing reverse animation
-        if (video.dataset.reverseAnimationId) {
-            delete video.dataset.reverseAnimationId;
-            video.classList.remove('reversing');
-        }
-        
-        // Pause the video and reset
-        video.pause();
-        
-        // If this video matches the active ID, play it
-        const shouldPlay = (video.id === activeVideoId);
-        
-        // Update display property based on whether this is the active video
-        video.style.display = shouldPlay ? 'block' : 'none';
-        
-        if (shouldPlay) {
-            // Use a fade transition effect
-            video.style.opacity = 0;
-            
-            // Special case for precipitation video to handle day/night sections
-            if (video.id === 'video-precipitation') {
-                // Handle day/night sections in precipitation video
-                video.addEventListener('loadedmetadata', function onceLoaded() {
-                    const duration = video.duration;
-                    // If it's night, jump to the night section of the video
-                    if (isNight) {
-                        // For night, use the second half of the video
-                        const jumpToTime = (duration / 2) + (duration / 6);
-                        video.currentTime = jumpToTime;
-                    } else {
-                        // For day, use the first part of the video
-                        const jumpToTime = duration / 6;
-                        video.currentTime = jumpToTime;
-                    }
-                    // Remove this listener after it's handled once
-                    video.removeEventListener('loadedmetadata', onceLoaded);
-                });
-                
-                // In case the video is already loaded
-                if (video.duration) {
-                    const duration = video.duration;
-                    if (isNight) {
-                        video.currentTime = (duration / 2) + (duration / 6);
-                    } else {
-                        video.currentTime = duration / 6;
-                    }
-                }
-            } else {
-                // For regular videos, start from beginning
-                video.currentTime = 0;
-            }
-            
-            // Small delay to ensure display has fully updated, then fade in
-            setTimeout(() => {
-                video.load();
-                
-                // Fade in the video
-                let opacity = 0;
-                const fadeIn = () => {
-                    opacity += 0.05;
-                    video.style.opacity = Math.min(opacity, 0.9);
-                    
-                    if (opacity < 0.9) {
-                        requestAnimationFrame(fadeIn);
-                    }
-                };
-                
-                // Start playback with fade-in effect
-                video.play().then(() => {
-                    requestAnimationFrame(fadeIn);
-                }).catch(err => {
-                    console.log('Video play error:', err);
-                    // Fallback to simpler playback if autoplay fails
-                    video.muted = true;
-                    video.play().then(() => {
-                        requestAnimationFrame(fadeIn);
-                    });
-                });
-            }, 100);
-        }
-    });
 }
 
 // Update the displayStationWeather function to handle missing data
@@ -1595,183 +1545,6 @@ function setCurrentWeatherCode(code) {
     }, 500);
 }
 
-// Function to play video in reverse
-function playVideoReverse(video) {
-    // Use requestAnimationFrame for smoother playback
-    const frameStep = 1/30; // Frames per second adjustment (smaller = smoother)
-    
-    // Start from the end of the video
-    let currentTime = video.duration;
-    video.currentTime = currentTime;
-    
-    // Create a unique ID for this animation so we can cancel it if needed
-    const animationId = 'reverse_' + Math.random().toString(36).substr(2, 9);
-    video.dataset.reverseAnimationId = animationId;
-    
-    // Add a class for reverse playback (useful for visual effects if needed)
-    video.classList.add('reversing');
-    
-    // Function to handle each frame of reverse playback
-    const reverseFrame = function() {
-        // Check if video is still visible or if we should stop
-        if (window.getComputedStyle(video).display === 'none' || 
-            video.dataset.reverseAnimationId !== animationId) {
-            video.classList.remove('reversing');
-            return;
-        }
-        
-        // Calculate new time with easing for smoother transitions at endpoints
-        if (currentTime <= 0.1) {
-            // Slow down at the beginning of the video (end of reverse playback)
-            currentTime = Math.max(0, currentTime - (frameStep * 0.5));
-        } else if (currentTime >= video.duration - 0.1) {
-            // Slow down at the end of the video (start of reverse playback)
-            currentTime = Math.max(0, currentTime - (frameStep * 0.5));
-        } else {
-            // Regular speed in the middle
-            currentTime = Math.max(0, currentTime - frameStep);
-        }
-        
-        // Apply the new time
-        video.currentTime = currentTime;
-        
-        // If we've reached the beginning, trigger the ended event to restart forward
-        if (currentTime <= 0) {
-            video.classList.remove('reversing');
-            video.currentTime = 0;
-            video.dispatchEvent(new Event('ended'));
-            return;
-        }
-        
-        // Continue the animation
-        requestAnimationFrame(reverseFrame);
-    };
-    
-    // Start the animation
-    requestAnimationFrame(reverseFrame);
-    
-    return animationId;
-}
-
-// Enhanced function to update weather videos when conditions change
-function updateWeatherVideos() {
-    const videos = document.querySelectorAll('.weather-video');
-    
-    videos.forEach(video => {
-        // Stop any existing reverse animation
-        if (video.dataset.reverseAnimationId) {
-            delete video.dataset.reverseAnimationId;
-            video.classList.remove('reversing');
-        }
-        
-        // Pause the video and reset
-        video.pause();
-        
-        // If this video is now visible based on the current weather, play it forward
-        if (window.getComputedStyle(video).display === 'block') {
-            // Use a fade transition effect
-            video.style.opacity = 0;
-            video.currentTime = 0;
-            
-            // Small delay to ensure display has fully updated, then fade in
-            setTimeout(() => {
-                video.load();
-                
-                // Fade in the video
-                let opacity = 0;
-                const fadeIn = () => {
-                    opacity += 0.05;
-                    video.style.opacity = Math.min(opacity, 0.9);
-                    
-                    if (opacity < 0.9) {
-                        requestAnimationFrame(fadeIn);
-                    }
-                };
-                
-                // Start playback with fade-in effect
-                video.play().then(() => {
-                    requestAnimationFrame(fadeIn);
-                }).catch(err => {
-                    console.log('Video play error:', err);
-                    // Fallback to simpler playback if autoplay fails
-                    video.muted = true;
-                    video.play().then(() => {
-                        requestAnimationFrame(fadeIn);
-                    });
-                });
-            }, 100);
-        }
-    });
-}
-
-// Handle video backgrounds for different weather conditions with seamless reversing
-function setupVideoBackgrounds() {
-    const videos = document.querySelectorAll('.weather-video');
-    
-    videos.forEach(video => {
-        // Set up event listeners for each video
-        let forward = true;
-        
-        // Prevent default looping behavior since we're handling it manually
-        video.removeAttribute('loop');
-        
-        // Add crossfade transition properties
-        video.style.transition = 'opacity 1s ease-in-out';
-        
-        // When video ends, play in reverse with a smooth transition
-        video.addEventListener('ended', function() {
-            if (forward) {
-                // Video just played forward, now play in reverse
-                video.pause();
-                
-                // Short delay before reversing for smoother transition
-                setTimeout(() => {
-                    forward = false;
-                    playVideoReverse(video);
-                }, 50);
-            } else {
-                // Video just played in reverse, now play forward again
-                video.pause();
-                
-                // Short delay before playing forward for smoother transition
-                setTimeout(() => {
-                    forward = true;
-                    video.currentTime = 0;
-                    video.play();
-                }, 50);
-            }
-        });
-        
-        // Improve seeking behavior
-        video.addEventListener('seeking', function() {
-            // If seeking during normal playback, make it smooth
-            if (!video.classList.contains('reversing')) {
-                video.style.opacity = 0.7;
-            }
-        });
-        
-        video.addEventListener('seeked', function() {
-            // Restore opacity after seeking completes
-            if (!video.classList.contains('reversing')) {
-                video.style.opacity = 0.9;
-            }
-        });
-        
-        // Load video if it's currently visible
-        if (window.getComputedStyle(video).display !== 'none') {
-            video.load();
-            // Add a slight delay before playing for better initialization
-            setTimeout(() => {
-                video.play().catch(err => {
-                    // Fallback for autoplay restrictions
-                    video.muted = true;
-                    video.play();
-                });
-            }, 100);
-        }
-    });
-}
-
 // Initialize the app with optimized settings
 document.addEventListener('DOMContentLoaded', () => {
     // Set extreme low performance for TV devices
@@ -1787,5 +1560,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update time initially
     updateCurrentTime();
-    setupVideoBackgrounds();
 });
