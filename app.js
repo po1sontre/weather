@@ -785,6 +785,19 @@ async function fetchWeatherData() {
             // Always show 6 days of forecasts, regardless of device performance
             const maxDays = 6;
             
+            // TV performance optimization: pause animation during updates
+            const needsOptimization = devicePerformanceScore <= 3;
+            if (needsOptimization && skycons.default) {
+                try {
+                    skycons.default.pause();
+                } catch (e) {
+                    console.warn('Could not pause Skycons:', e);
+                }
+            }
+            
+            // Create non-animated forecast icons for very low performance devices
+            const useSimpleIcons = devicePerformanceScore <= 2;
+            
             for (let i = 0; i < Math.min(maxDays, forecastData.forecasts.length); i++) {
                 const day = forecastData.forecasts[i];
                 const date = new Date(day.date);
@@ -798,19 +811,37 @@ async function fetchWeatherData() {
                 // Create forecast day element
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'forecast-day';
-                dayDiv.innerHTML = `
-                    <div class="day-name">${dayName}</div>
-                    <div class="forecast-icon">
-                        <canvas id="${iconId}" width="64" height="64"></canvas>
-                    </div>
-                    <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
-                    <div class="forecast-desc">${desc}</div>
-                `;
+                
+                // For very low performance devices, use static icons instead of animated Skycons
+                if (useSimpleIcons) {
+                    const staticIconClass = getForecastIconClass(code, desc);
+                    dayDiv.innerHTML = `
+                        <div class="day-name">${dayName}</div>
+                        <div class="forecast-icon static-icon">
+                            <i class="${staticIconClass}"></i>
+                        </div>
+                        <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
+                        <div class="forecast-desc">${desc}</div>
+                    `;
+                } else {
+                    dayDiv.innerHTML = `
+                        <div class="day-name">${dayName}</div>
+                        <div class="forecast-icon">
+                            <canvas id="${iconId}" width="64" height="64"></canvas>
+                        </div>
+                        <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
+                        <div class="forecast-desc">${desc}</div>
+                    `;
+                }
+                
                 forecastElem.appendChild(dayDiv);
                 
                 // Standardize and set the weather icon
                 const wmoCode = standardizeWeatherCode(code, desc);
                 console.log(`Forecast day ${i}: ${dayName}, code: ${code} → ${wmoCode}, desc: ${desc}`);
+                
+                // Skip Skycons setup for simple icons mode
+                if (useSimpleIcons) continue;
                 
                 // Get icon type based on the weather code
                 let iconType;
@@ -837,10 +868,29 @@ async function fetchWeatherData() {
                 // Add icon immediately after creating the element
                 const iconElement = document.getElementById(iconId);
                 if (iconElement) {
+                    // For low performance, use canvas optimization
+                    if (needsOptimization && iconElement.getContext) {
+                        const ctx = iconElement.getContext('2d');
+                        if (ctx) {
+                            ctx.imageSmoothingEnabled = false;
+                            ctx.imageSmoothingQuality = 'low';
+                        }
+                    }
+                    
                     skycons.default.add(iconId, iconType);
                     console.log(`Added forecast icon ${iconId} with type ${iconType}`);
                 } else {
                     console.error(`Could not find element with ID: ${iconId}`);
+                }
+            }
+            
+            // Resume animations after all icons are added
+            if (needsOptimization && skycons.default) {
+                try {
+                    // Short delay to let browser process DOM changes
+                    setTimeout(() => skycons.default.play(), 100);
+                } catch (e) {
+                    console.warn('Could not resume Skycons:', e);
                 }
             }
         }
@@ -1025,41 +1075,55 @@ function detectDevicePerformance() {
     // Default score (higher is better)
     let score = 5;
     
-    // Check if it's a TV device
+    // Check if it's a TV device - most aggressive optimization for TVs
     const userAgent = navigator.userAgent.toLowerCase();
-    if (
+    const isTVDevice = 
         userAgent.includes('tv') || 
         userAgent.includes('smart-tv') || 
         userAgent.includes('smarttv') || 
         userAgent.includes('appletv') || 
         userAgent.includes('googletv') || 
         userAgent.includes('webos') || 
-        userAgent.includes('tizen')
-    ) {
-        // Detected TV - reduce performance score
-        score -= 2;
-        console.log('TV device detected, reducing performance score');
-    }
+        userAgent.includes('tizen');
     
-    // Check for older browsers that might indicate older hardware
-    if (!window.IntersectionObserver || !window.ResizeObserver) {
-        score -= 1;
-        console.log('Older browser features detected, reducing performance score');
-    }
-    
-    // Check memory (if available)
-    if (navigator.deviceMemory) {
-        if (navigator.deviceMemory < 4) {
-            score -= Math.max(0, 3 - navigator.deviceMemory);
-            console.log(`Low memory (${navigator.deviceMemory}GB) detected, reducing performance score`);
+    if (isTVDevice) {
+        // Detected TV - use lowest performance score
+        score = 1; // Extreme performance optimization for TVs
+        console.log('TV device detected, activating extreme optimizations');
+    } else {
+        // Check for TV-like screen dimensions
+        const width = window.screen.width || window.innerWidth;
+        const height = window.screen.height || window.innerHeight;
+        const aspectRatio = width / height;
+        const isLargeScreen = width >= 1920;
+        const isTVRatio = aspectRatio > 1.7 && aspectRatio < 1.8; // Close to 16:9
+        
+        if (isLargeScreen && isTVRatio) {
+            // Likely a TV based on screen size
+            score = 2; // Strong optimization
+            console.log('TV-like screen detected, applying strong optimizations');
         }
-    }
-    
-    // If device has limited hardware, detect it from CPU cores if available
-    if (navigator.hardwareConcurrency) {
-        if (navigator.hardwareConcurrency < 4) {
+        
+        // Check for older browsers that might indicate older hardware
+        if (!window.IntersectionObserver || !window.ResizeObserver) {
             score -= 1;
-            console.log(`Limited CPU cores (${navigator.hardwareConcurrency}) detected, reducing performance score`);
+            console.log('Older browser features detected, reducing performance score');
+        }
+        
+        // Check memory (if available)
+        if (navigator.deviceMemory) {
+            if (navigator.deviceMemory < 4) {
+                score -= Math.max(0, 3 - navigator.deviceMemory);
+                console.log(`Low memory (${navigator.deviceMemory}GB) detected, reducing performance score`);
+            }
+        }
+        
+        // If device has limited hardware, detect it from CPU cores if available
+        if (navigator.hardwareConcurrency) {
+            if (navigator.hardwareConcurrency < 4) {
+                score -= 1;
+                console.log(`Limited CPU cores (${navigator.hardwareConcurrency}) detected, reducing performance score`);
+            }
         }
     }
     
@@ -1071,10 +1135,58 @@ function detectDevicePerformance() {
     
     console.log(`Device performance score: ${score}/5`);
     
-    // For very low-end devices, limit cloud decorations but don't disable completely
-    if (score <= 2 && window.cloudDecorations) {
-        window.cloudDecorations.maxClouds = 2; // Limit to 2 clouds maximum instead of disabling
-        console.log('Low performance device: limiting cloud decorations to 2 clouds');
+    // Additional device-specific optimizations
+    if (score <= 2) {
+        // Extreme optimizations for low-performance devices
+        
+        // 1. Update body with performance class
+        document.body.classList.add('low-performance-device');
+        
+        // 2. Reduce animation complexity across the app
+        document.querySelectorAll('.forecast-day').forEach(day => {
+            // Remove hover effects which can cause lag
+            day.classList.add('no-hover');
+        });
+        
+        // 3. Force disable any complex animations
+        if (window.cloudDecorations) {
+            if (score === 1) {
+                // Completely disable cloud decorations for extreme cases
+                window.cloudDecorations.maxClouds = 0; 
+                console.log('Lowest performance device: disabling cloud decorations');
+            } else {
+                // Limit to 2 clouds for low-performance
+                window.cloudDecorations.maxClouds = 2;
+                console.log('Low performance device: limiting cloud decorations to 2 clouds');
+            }
+        }
+        
+        // 4. Inject CSS optimization
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Optimize for low performance */
+            .low-performance-device * {
+                transition-duration: 0.5s !important;
+                animation-duration: 0.5s !important;
+            }
+            
+            /* Remove hover effects */
+            .low-performance-device .no-hover:hover,
+            .low-performance-device .forecast-day:hover {
+                transform: none !important;
+                box-shadow: none !important;
+            }
+            
+            /* Optimize canvas rendering */
+            .low-performance-device canvas {
+                image-rendering: optimizeSpeed;
+                image-rendering: -moz-crisp-edges;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: optimize-contrast;
+                image-rendering: pixelated;
+            }
+        `;
+        document.head.appendChild(style);
     }
     
     return score;
@@ -1091,7 +1203,35 @@ function initializeSkycons() {
         })
     };
     
-    // Start animation 
+    // TV optimization: reduce frame rate for better performance
+    if (devicePerformanceScore <= 3) {
+        try {
+            // Reduce animation frame rate to improve performance
+            skycons.default._frameRate = 10; // Reduce from default 30fps
+
+            // Modify the draw step to update less frequently
+            const originalDrawLoop = skycons.default._loop;
+            skycons.default._loop = function() {
+                if (!this._frameRate) this._frameRate = 30;
+                
+                // Check if we should update (only every few frames)
+                const now = Date.now();
+                if (!this._lastUpdate || now - this._lastUpdate >= (1000 / this._frameRate)) {
+                    this._lastUpdate = now;
+                    originalDrawLoop.call(this);
+                } else {
+                    // Skip this frame
+                    requestAnimationFrame(() => this._loop());
+                }
+            };
+            
+            console.log("Using optimized Skycons for TV with reduced frame rate");
+        } catch (e) {
+            console.warn("Could not optimize Skycons animation:", e);
+        }
+    }
+    
+    // Start animation with optimized settings
     skycons.default.play();
     console.log("Initialized optimized Skycons");
 }
@@ -1139,11 +1279,40 @@ function setWeatherIcon(code) {
         iconType = Skycons.CLOUDY;
     }
     
-    // Remove any existing icon
-    skycons.default.remove('current-icon');
-    
-    // Add the new icon
-    skycons.default.add('current-icon', iconType);
+    // Performance optimization for TV: pause Skycons before changing
+    if (devicePerformanceScore <= 3) {
+        // First pause to reduce workload during icon change
+        try {
+            skycons.default.pause();
+            
+            // Reduce CPU impact by cleaning up first
+            skycons.default.remove('current-icon');
+            
+            // For low-performance devices, set a simplified rendering option
+            if (iconCanvas.getContext) {
+                const ctx = iconCanvas.getContext('2d');
+                if (ctx) {
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.imageSmoothingQuality = 'low';
+                }
+            }
+            
+            // Add the new icon with optimized settings
+            skycons.default.add('current-icon', iconType);
+            
+            // Resume animation after a short delay to let the browser catch up
+            setTimeout(() => skycons.default.play(), 100);
+        } catch (e) {
+            console.warn("Error during icon optimization:", e);
+            // Fallback: use standard approach
+            skycons.default.remove('current-icon');
+            skycons.default.add('current-icon', iconType);
+        }
+    } else {
+        // For higher performance devices, use standard approach
+        skycons.default.remove('current-icon');
+        skycons.default.add('current-icon', iconType);
+    }
     
     // Update the weather background
     setWeatherBackground(code);
