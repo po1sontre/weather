@@ -123,29 +123,43 @@ body {
   top: 20px;
   right: 20px;
   z-index: 1000;
-}
-
-.top-right-time .current-time {
-  font-size: 1.3rem;
-  color: var(--text-color);
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--tv-glass-background);
   padding: 0.5rem 1.2rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--border-color);
+}
+
+.top-right-time .current-time {
+  font-size: 1.8rem; /* Increased from 1.3rem */
+  color: var(--text-color);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.top-right-time .current-date {
+  font-size: 1.6rem; /* Match time size */
+  color: var(--text-color);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  padding-left: 8px;
+  border-left: 2px solid var(--primary-color);
+  margin-left: 5px;
 }
 
 /* District Info - Highlighted as requested */
 .district-info {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
-  padding: 0.8rem 1.2rem;
+  padding: 1rem 1.2rem; /* Increased padding */
   border-radius: 12px;
-  margin-bottom: 1.2rem;
-  font-size: 1.1rem; /* Reduced from 2rem */
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem; /* Increased from 1.1rem */
   font-weight: 700;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -168,13 +182,13 @@ body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
+  margin-bottom: 2.5rem; /* Increased from 2rem */
+  padding-bottom: 2.5rem; /* Increased from 2rem */
   border-bottom: 1px solid var(--border-color);
 }
 
 .location {
-  font-size: 2.8rem;
+  font-size: 3.6rem; /* Increased from 2.8rem */
   font-weight: 800;
   color: var(--text-color);
   letter-spacing: 1px;
@@ -184,30 +198,11 @@ body {
 }
 
 .temperature {
-  font-size: 3.2rem;
+  font-size: 4.0rem; /* Increased from 3.2rem */
   font-weight: 800;
   color: var(--primary-color);
   margin: 0;
   text-align: right;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Current Time */
-.location-header {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.location-header .current-time {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-color);
-  opacity: 0.9;
-  letter-spacing: 0.5px;
-  background: var(--tv-glass-background);
-  padding: 0.8rem 1.5rem;
-  border-radius: 12px;
-  display: inline-block;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -217,10 +212,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem; /* Increased from 1rem */
   text-align: center;
-  padding: 0 0 1rem 0;
+  padding: 0 0 1.5rem 0; /* Increased from 1rem */
   border-bottom: 1px solid var(--border-color);
+  margin-top: 1rem; /* Added margin-top for more spacing */
 }
 
 .weather-main-info {
@@ -228,7 +224,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem; /* Increased from 1rem */
   width: 100%;
 }
 
@@ -236,14 +232,14 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0.5rem 0;
-  min-height: 125px;
+  margin: 1rem 0; /* Increased from 0.5rem */
+  min-height: 180px; /* Increased from 125px */
   position: relative;
 }
 
 .weather-icon canvas {
-  width: 125px !important;
-  height: 125px !important;
+  width: 180px !important; /* Increased from 125px */
+  height: 180px !important; /* Increased from 125px */
   display: block;
   filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
 }
@@ -251,13 +247,13 @@ body {
 .weather-details {
   display: flex;
   justify-content: center;
-  gap: 2rem;
-  font-size: 1rem; /* Reduced from 2rem */
+  gap: 3rem; /* Increased from 2rem */
+  font-size: 1.6rem; /* Increased from 1rem */
   font-weight: 500;
   color: var(--text-color);
   background: var(--tv-glass-background);
-  padding: 0.8rem 1.5rem;
-  border-radius: 12px;
+  padding: 1.2rem 2rem; /* Increased from 0.8rem 1.5rem */
+  border-radius: 16px; /* Increased from 12px */
   width: fit-content;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
@@ -266,9 +262,9 @@ body {
 .forecast-container {
   display: flex;
   flex-direction: row;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+  gap: 2rem; /* Increased from 1.5rem */
+  margin-top: 2rem; /* Increased from 1.5rem */
+  padding-top: 1.5rem; /* Increased from 1rem */
   padding-bottom: 0;
   overflow-x: unset;
   flex-wrap: nowrap;
@@ -281,9 +277,9 @@ body {
 /* Forecast Day - Better spacing for larger icons */
 .forecast-day {
   text-align: center;
-  padding: 1.8rem; /* Increased from 1.5rem */
+  padding: 2.2rem; /* Increased from 1.8rem */
   background: var(--tv-glass-background);
-  border-radius: 16px;
+  border-radius: 20px; /* Increased from 16px */
   min-width: 0;
   max-width: none;
   width: auto;
@@ -302,10 +298,10 @@ body {
 }
 
 .forecast-day .day-name {
-  font-size: 1.6rem; /* Increased from 1.4rem */
+  font-size: 2rem; /* Increased from 1.6rem */
   font-weight: 700;
   color: var(--text-color);
-  margin-bottom: 0.8rem; /* Increased from 0.6rem */
+  margin-bottom: 1rem; /* Increased from 0.8rem */
   letter-spacing: 0.5px;
   text-transform: uppercase;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -315,25 +311,25 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0.7rem 0;
-  min-height: 80px;
+  margin: 1rem 0; /* Increased from 0.7rem */
+  min-height: 100px; /* Increased from 80px */
   position: relative;
 }
 
 .forecast-day .forecast-icon canvas {
-  width: 80px !important;
-  height: 80px !important;
+  width: 100px !important; /* Increased from 80px */
+  height: 100px !important; /* Increased from 80px */
   display: block;
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.3));
 }
 
 .forecast-day .forecast-desc {
-  font-size: 1.2rem; /* Increased from 1.1rem */
+  font-size: 1.5rem; /* Increased from 1.2rem */
   color: var(--text-color);
   text-align: center;
   font-weight: 500;
-  margin: 0.7rem 0; /* Adjusted from 0.5rem */
-  min-height: 2.4rem; /* Increased from 2.2rem */
+  margin: 1rem 0; /* Increased from 0.7rem */
+  min-height: 3rem; /* Increased from 2.4rem */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,10 +337,10 @@ body {
 }
 
 .forecast-day .forecast-temp {
-  font-size: 1.8rem; /* Increased from 1.5rem */
+  font-size: 2.2rem; /* Increased from 1.8rem */
   font-weight: 700;
   color: var(--primary-color);
-  margin-top: 0.6rem; /* Increased from 0.4rem */
+  margin-top: 0.8rem; /* Increased from 0.6rem */
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
@@ -377,22 +373,28 @@ body {
 }
 
 @media (max-width: 768px) {
-  .ad-banner-full {
-    font-size: 1.6rem;
-    padding: 1.5rem 0;
-    margin-top: 1.5rem;
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
   .weather-container {
     padding: 1.5rem;
     margin-top: 20px;
   }
   
+  .top-right-time {
+    top: 10px;
+    right: 10px;
+    padding: 0.3rem 0.8rem;
+  }
+  
+  .top-right-time .current-time {
+    font-size: 1.2rem;
+  }
+  
+  .top-right-time .current-date {
+    font-size: 1.1rem;
+    padding-left: 5px;
+  }
+  
   .district-info {
-    font-size: 0.9rem;
+    font-size: 1rem;
     padding: 0.6rem 1rem;
   }
   
@@ -405,25 +407,28 @@ body {
   }
   
   .location {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
   
   .temperature {
     font-size: 2.5rem;
   }
   
-  .current-time {
-    font-size: 1.2rem;
+  .weather-icon {
+    min-height: 100px;
+  }
+  
+  .weather-icon canvas {
+    width: 100px !important;
+    height: 100px !important;
   }
   
   .weather-details {
     flex-direction: column;
     gap: 0.8rem;
     align-items: flex-start;
-  }
-  
-  .weather-details span {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
+    padding: 0.8rem 1.2rem;
   }
   
   .forecast-container {
@@ -431,6 +436,7 @@ body {
     padding-bottom: 1rem;
     flex-wrap: nowrap;
     justify-content: flex-start;
+    gap: 1rem;
   }
   
   .forecast-container::-webkit-scrollbar {
@@ -452,85 +458,122 @@ body {
   
   .forecast-day {
     flex: 0 0 auto;
-    width: 100px;
+    width: 120px;
+    padding: 1.2rem;
   }
   
   .forecast-day .day-name {
-    font-size: 0.9rem;
+    font-size: 1.1rem;
   }
   
   .forecast-day .forecast-icon {
-    height: 50px;
+    height: 60px;
+    min-height: 60px;
+  }
+  
+  .forecast-day .forecast-icon canvas {
+    width: 60px !important;
+    height: 60px !important;
   }
   
   .forecast-day .forecast-desc {
-    font-size: 0.75rem;
+    font-size: 1rem;
     white-space: normal;
     max-width: 100%;
+    min-height: 2.2rem;
   }
   
   .forecast-day .forecast-temp {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
   }
   
-  .top-right-time {
-    top: 15px;
-    right: 15px;
-  }
-  
-  .top-right-time .current-time {
-    font-size: 1rem;
+  .humidity,
+  .wind {
+    font-size: 1.1rem;
     padding: 0.4rem 0.8rem;
+  }
+  
+  .humidity i,
+  .wind i {
+    font-size: 1.2em;
+  }
+  
+  .ad-banner-full {
+    font-size: 1.2rem;
+    padding: 1rem 0;
+    margin-top: 1.5rem;
   }
 }
 
 @media (min-width: 1200px) {
   .weather-container {
-    max-width: 1200px;
-    padding: 2rem;
+    max-width: 1400px; /* Increased from 1200px */
+    padding: 3rem; /* Increased from 2rem */
   }
 
   .district-info {
-    font-size: 1.2rem;
-    padding: 0.9rem 1.5rem;
+    font-size: 1.8rem; /* Increased from 1.2rem */
+    padding: 1.2rem 2rem; /* Increased from 0.9rem 1.5rem */
   }
 
   .location {
-    font-size: 2rem;
+    font-size: 4.2rem; /* Increased from 2rem */
   }
 
   .temperature {
-    font-size: 2.2rem;
+    font-size: 4.5rem; /* Increased from 2.2rem */
   }
 
   .current-time {
-    font-size: 1.2rem;
+    font-size: 2.4rem; /* Larger time display */
+  }
+
+  .current-date {
+    font-size: 2.2rem; /* Larger date display */
   }
 
   .weather-details {
-    font-size: 1.1rem;
-    gap: 3rem;
+    font-size: 2rem; /* Increased from 1.1rem */
+    gap: 4rem; /* Increased from 3rem */
+    padding: 1.5rem 2.5rem; /* Added padding */
   }
 
   .forecast-day {
-    padding: 1rem;
+    padding: 2.5rem; /* Increased from 1rem */
   }
 
   .forecast-day .day-name {
-    font-size: 1.2rem;
+    font-size: 2.2rem; /* Increased from 1.2rem */
   }
 
-  .forecast-day .forecast-icon {
-    font-size: 1.8rem;
+  .forecast-day .forecast-icon canvas {
+    width: 120px !important; /* Increased from specified above */
+    height: 120px !important; /* Increased from specified above */
   }
 
   .forecast-day .forecast-desc {
-    font-size: 0.9rem;
-    min-height: 2.2rem;
+    font-size: 1.8rem; /* Increased from 0.9rem */
+    min-height: 3.6rem; /* Increased from 2.2rem */
   }
 
   .forecast-day .forecast-temp {
-    font-size: 1.3rem;
+    font-size: 2.5rem; /* Increased from 1.3rem */
+  }
+  
+  .top-right-time {
+    top: 30px; /* More space from top */
+    right: 30px; /* More space from right */
+  }
+  
+  .humidity, 
+  .wind {
+    font-size: 2rem; /* Larger weather details */
+    padding: 0.8rem 1.5rem; /* Larger padding */
+  }
+  
+  .weather-icon canvas {
+    width: 220px !important; /* Even larger main weather icon */
+    height: 220px !important;
   }
 }
 
@@ -539,13 +582,14 @@ body {
 .wind {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.8rem; /* Increased from 0.5rem */
   position: relative;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
+  padding: 0.6rem 1.2rem; /* Increased from 0.4rem 0.8rem */
+  border-radius: 8px; /* Increased from 6px */
   background: rgba(255, 255, 255, 0.08);
   transition: all 0.3s ease;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-size: 1.6rem; /* Added explicit font size */
 }
 
 .humidity:hover,
@@ -557,7 +601,7 @@ body {
 .humidity i,
 .wind i {
   color: var(--primary-color);
-  font-size: 1.1em;
+  font-size: 1.5em; /* Increased from 1.1em */
 }
 
 /* Loading and Error States */
@@ -1231,4 +1275,62 @@ canvas {
 .lunixo-app.weather-thunder #video-thunder {
     display: block !important;
     opacity: 1 !important;
+}
+
+/* Additional Lunixo TV optimizations for enlarged text */
+.lunixo-app .top-right-time {
+    background: rgba(20, 30, 50, 0.8) !important; /* More opaque background */
+    border: 2px solid var(--primary-color) !important; /* More visible border */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4) !important; /* Enhanced shadow */
+}
+
+.lunixo-app .top-right-time .current-time,
+.lunixo-app .top-right-time .current-date {
+    text-shadow: 0 3px 5px rgba(0, 0, 0, 0.7) !important; /* Enhanced text shadow */
+}
+
+.lunixo-app .location {
+    font-size: 4.5rem !important; /* Slightly larger than regular big screen */
+    text-shadow: 0 3px 5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.lunixo-app .temperature {
+    font-size: 5rem !important; /* Slightly larger than regular big screen */
+    text-shadow: 0 3px 5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.lunixo-app .district-info {
+    font-size: 2rem !important; /* Larger district info text */
+    padding: 1.5rem !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+.lunixo-app .forecast-day {
+    padding: 2.8rem !important; /* Extra padding for forecast days */
+    background: rgba(20, 30, 50, 0.8) !important; /* More opaque background */
+}
+
+.lunixo-app .forecast-day .day-name {
+    font-size: 2.5rem !important; /* Larger day names */
+}
+
+.lunixo-app .forecast-day .forecast-desc {
+    font-size: 2rem !important; /* Larger forecast descriptions */
+    min-height: 4rem !important; /* Taller min-height for forecast descriptions */
+}
+
+.lunixo-app .forecast-day .forecast-temp {
+    font-size: 2.8rem !important; /* Larger forecast temperatures */
+}
+
+.lunixo-app .humidity,
+.lunixo-app .wind {
+    font-size: 2.2rem !important; /* Larger weather details */
+    padding: 1rem 2rem !important;
+    background: rgba(255, 255, 255, 0.1) !important; /* Slightly more visible */
+}
+
+.lunixo-app .humidity i,
+.lunixo-app .wind i {
+    font-size: 1.6em !important; /* Larger icons */
 }

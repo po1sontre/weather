@@ -1710,11 +1710,15 @@ function updateCurrentTime() {
         const now = new Date();
         topRightTime.textContent = now.toLocaleTimeString(currentLang, {hour: '2-digit', minute:'2-digit'});
     }
-    // Update the card's .current-time (if present)
-    const cardTime = document.querySelector('.location-header .current-time');
-    if (cardTime) {
+    
+    // Update the date display in MM/DD format
+    const dateDisplay = document.querySelector('.top-right-time .current-date');
+    if (dateDisplay) {
         const now = new Date();
-        cardTime.textContent = now.toLocaleDateString(currentLang, { weekday: 'long', month: 'long', day: 'numeric' });
+        // Format as MM/DD
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        dateDisplay.textContent = `${month}/${day}`;
     }
 }
 
