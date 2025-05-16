@@ -1369,7 +1369,7 @@ function setWeatherBackground(code) {
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
         weatherEffect = 'snow';
-        activeVideoId = 'video-precipitation';
+        activeVideoId = 'video-snow'; // Updated to use the new snow video
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
         weatherEffect = 'fog';
@@ -1377,7 +1377,7 @@ function setWeatherBackground(code) {
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
         weatherEffect = 'rain';
-        activeVideoId = 'video-precipitation';
+        activeVideoId = 'video-thunder'; // Updated to use the thunder video
     } else {
         weatherClass = 'weather-clear';
         activeVideoId = 'video-clearsky';
@@ -1422,8 +1422,8 @@ function setWeatherBackground(code) {
                 // Make the active video visible first
                 activeVideo.style.display = 'block';
                 
-                // For precipitation video that has day/night sections
-                if (activeVideoId === 'video-precipitation') {
+                // For videos that have day/night sections
+                if (activeVideoId === 'video-snow' || activeVideoId === 'video-thunder') {
                     // Set video current time based on day/night
                     try {
                         // Define a function to handle video loading and playback
@@ -1464,7 +1464,7 @@ function setWeatherBackground(code) {
                             activeVideo.addEventListener('loadedmetadata', setupVideo, { once: true });
                         }
                     } catch (e) {
-                        console.error('Error setting up precipitation video:', e);
+                        console.error(`Error setting up ${activeVideoId} video:`, e);
                     }
                 } else {
                     // For standard videos

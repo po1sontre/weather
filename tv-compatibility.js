@@ -84,6 +84,11 @@ function applyTVFixes() {
                         video.playbackRate = 0.8;
                     }
                 }
+                
+                // Special handling for snow video which may need smoother playback
+                if (video.id === 'video-snow' && video.style.display === 'block') {
+                    video.playbackRate = 0.7; // Slightly slower for snow
+                }
             } catch (e) {
                 console.warn('Could not optimize video settings:', e);
             }
