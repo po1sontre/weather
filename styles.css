@@ -916,11 +916,16 @@ body {
     transition: opacity 1.5s ease;
     pointer-events: none;
     transform: translateZ(0); /* Hardware acceleration for better performance */
-    will-change: opacity; /* Hint for browser optimization */
+    will-change: opacity, transform; /* Hint for browser optimization */
     display: none; /* Initially hidden, will be made visible in JS */
+    
+    /* Additional optimizations for video playback */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -webkit-transform: translate3d(0,0,0);
 }
 
-/* Video background visibility classes for each weather condition */
+/* Video background visibility classes for each weather condition - optimized rendering */
 body.weather-clear #video-clearsky {
     opacity: 0.9;
     display: block;

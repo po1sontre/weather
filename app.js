@@ -1545,6 +1545,127 @@ function setCurrentWeatherCode(code) {
     }, 500);
 }
 
+// Handle video backgrounds for different weather conditions with reversing
+function setupVideoBackgrounds() {
+    const videos = document.querySelectorAll('.weather-video');
+    
+    videos.forEach(video => {
+        // Set up event listeners for each video
+        let forward = true;
+        
+        // Prevent default looping behavior since we're handling it manually
+        video.removeAttribute('loop');
+        
+        // When video ends, play in reverse
+        video.addEventListener('ended', function() {
+            if (forward) {
+                // Video just played forward, now play in reverse
+                video.pause();
+                forward = false;
+                playVideoReverse(video);
+            } else {
+                // Video just played in reverse, now play forward again
+                video.pause();
+                forward = true;
+                video.currentTime = 0;
+                video.play();
+            }
+        });
+        
+        // Load video if it's currently visible
+        if (window.getComputedStyle(video).display !== 'none') {
+            video.load();
+            video.play();
+        }
+    });
+}
+
+// Function to play video in reverse
+function playVideoReverse(video) {
+    const fps = 30; // Frames per second (adjust as needed)
+    const interval = 1000 / fps;
+    
+    let currentTime = video.duration;
+    video.currentTime = currentTime;
+    
+    // Create a unique ID for this timer so we can clear it if needed
+    const timerId = 'reverse_' + Math.random().toString(36).substr(2, 9);
+    video.dataset.reverseTimerId = timerId;
+    
+    const timer = setInterval(function() {
+        // Check if video is still on screen or if we should stop
+        if (window.getComputedStyle(video).display === 'none' || 
+            video.dataset.reverseTimerId !== timerId) {
+            clearInterval(timer);
+            return;
+        }
+        
+        currentTime -= interval / 1000;
+        
+        if (currentTime <= 0) {
+            clearInterval(timer);
+            video.currentTime = 0;
+            video.dispatchEvent(new Event('ended'));
+            return;
+        }
+        
+        video.currentTime = currentTime;
+    }, interval);
+    
+    return timer;
+}
+
+// Enhanced function to update weather videos when conditions change
+function updateWeatherVideos() {
+    const videos = document.querySelectorAll('.weather-video');
+    
+    videos.forEach(video => {
+        // Stop any existing reverse playback
+        if (video.dataset.reverseTimerId) {
+            delete video.dataset.reverseTimerId;
+        }
+        
+        // Pause the video and reset
+        video.pause();
+        video.currentTime = 0;
+        
+        // If this video is now visible based on the current weather, play it forward
+        if (window.getComputedStyle(video).display === 'block') {
+            // Small delay to ensure display has fully updated
+            setTimeout(() => {
+                video.load();
+                video.play().catch(err => {
+                    console.log('Video play error:', err);
+                    // Fallback to simpler playback if autoplay fails
+                    video.muted = true;
+                    video.play();
+                });
+            }, 100);
+        }
+    });
+}
+
+// Update the updateWeatherUI function to use our enhanced video handling
+function updateWeatherUI(data) {
+    // ... existing code ...
+    
+    // Set weather class on body
+    document.body.className = ''; // Reset classes
+    
+    if (isNightTime()) {
+        document.body.classList.add('night');
+    }
+    
+    // Add weather condition class
+    let weatherClass = getWeatherClass(weatherDescription);
+    document.body.classList.add(weatherClass);
+    
+    // Update videos for current weather condition
+    updateWeatherVideos();
+    
+    // ... existing code ...
+}
+
 // Initialize the app with optimized settings
 document.addEventListener('DOMContentLoaded', () => {
     // Set extreme low performance for TV devices
@@ -1560,4 +1681,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update time initially
     updateCurrentTime();
+    setupVideoBackgrounds();
 });
