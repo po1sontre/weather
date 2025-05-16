@@ -109,7 +109,7 @@ body {
   border-radius: 24px;
   padding: 2.5rem;
   width: 100%;
-  max-width: 1500px;
+  max-width: 1800px;
   box-shadow: 0 12px 48px var(--shadow-color);
   margin-top: 30px;
   border: 1px solid var(--border-color);
@@ -262,9 +262,9 @@ body {
 .forecast-container {
   display: flex;
   flex-direction: row;
-  gap: 1.6rem; /* Reduced from 2rem */
-  margin-top: 1.6rem; /* Reduced from 2rem */
-  padding-top: 1.2rem; /* Reduced from 1.5rem */
+  gap: 1rem;
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
   padding-bottom: 0;
   overflow-x: unset;
   flex-wrap: nowrap;
@@ -277,9 +277,9 @@ body {
 /* Forecast Day - Better spacing for larger icons */
 .forecast-day {
   text-align: center;
-  padding: 1.8rem; /* Reduced from 2.2rem */
+  padding: 1.2rem 1rem;
   background: var(--tv-glass-background);
-  border-radius: 16px; /* Reduced from 20px */
+  border-radius: 16px;
   min-width: 0;
   max-width: none;
   width: auto;
@@ -298,10 +298,10 @@ body {
 }
 
 .forecast-day .day-name {
-  font-size: 1.6rem; /* Reduced from 2rem */
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-color);
-  margin-bottom: 0.8rem; /* Reduced from 1rem */
+  margin-bottom: 0.5rem; /* Reduced from 0.8rem */
   letter-spacing: 0.5px;
   text-transform: uppercase;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -324,12 +324,12 @@ body {
 }
 
 .forecast-day .forecast-desc {
-  font-size: 1.2rem; /* Reduced from 1.5rem */
+  font-size: 1.2rem;
   color: var(--text-color);
   text-align: center;
   font-weight: 500;
-  margin: 0.8rem 0; /* Reduced from 1rem */
-  min-height: 2.4rem; /* Reduced from 3rem */
+  margin: 0.5rem 0; /* Reduced from 0.8rem */
+  min-height: 2rem; /* Reduced from 2.4rem for more compact display */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -507,10 +507,14 @@ body {
 
 @media (min-width: 1200px) {
   .weather-container {
-    max-width: 1200px; /* Reduced from 1400px */
-    padding: 2.5rem; /* Reduced from 3rem */
+    max-width: 1800px; /* Match the wider container size */
+    padding: 2.5rem;
   }
 
+  .forecast-day {
+    padding: 1.5rem 1rem; /* More compact padding */
+  }
+  
   .district-info {
     font-size: 1.4rem; /* Reduced from 1.8rem */
     padding: 1rem 1.6rem; /* Reduced from 1.2rem 2rem */
@@ -536,10 +540,6 @@ body {
     font-size: 1.6rem; /* Reduced from 2rem */
     gap: 3rem; /* Reduced from 4rem */
     padding: 1.2rem 2rem; /* Reduced from 1.5rem 2.5rem */
-  }
-
-  .forecast-day {
-    padding: 2rem; /* Reduced from 2.5rem */
   }
 
   .forecast-day .day-name {
@@ -1306,7 +1306,7 @@ canvas {
 }
 
 .lunixo-app .forecast-day {
-    padding: 2.2rem !important; /* Reduced from 2.8rem */
+    padding: 1.5rem 1rem !important; /* More compact padding */
     background: rgba(20, 30, 50, 0.8) !important; /* More opaque background */
 }
 
@@ -1316,7 +1316,8 @@ canvas {
 
 .lunixo-app .forecast-day .forecast-desc {
     font-size: 1.6rem !important; /* Reduced from 2rem */
-    min-height: 3.2rem !important; /* Reduced from 4rem */
+    min-height: 3rem !important; /* Reduced from 3.2rem */
+    margin: 0.5rem 0 !important;
 }
 
 .lunixo-app .forecast-day .forecast-temp {
