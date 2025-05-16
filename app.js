@@ -1217,13 +1217,25 @@ function setWeatherBackground(code) {
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Handle all video backgrounds
+    // Handle all video backgrounds for better TV compatibility
     const allVideos = document.querySelectorAll('.weather-video');
     if (allVideos.length > 0) {
-        // First pause all videos
+        // First hide all videos - better for TV compatibility
         allVideos.forEach(video => {
-            if (video.id !== activeVideoId) {
+            video.style.display = 'none';
+            // Make sure autoplay and loop are enabled
+            video.setAttribute('autoplay', '');
+            video.setAttribute('loop', '');
+            
+            // Ensure video is loaded (preload attribute)
+            video.setAttribute('preload', 'auto');
+            
+            // Reset any video that was previously playing
+            try {
                 video.pause();
+                video.currentTime = 0;
+            } catch (e) {
+                console.warn('Could not pause video:', e);
             }
         });
         
@@ -1238,40 +1250,71 @@ function setWeatherBackground(code) {
             // Handle the active video
             const activeVideo = document.getElementById(activeVideoId);
             if (activeVideo) {
+                // Make the active video visible first
+                activeVideo.style.display = 'block';
+                
                 // For precipitation video that has day/night sections
                 if (activeVideoId === 'video-precipitation') {
                     // Set video current time based on day/night
-                    // Day footage is in the first half, night footage in the second half
-                    
-                    // Get video duration and set appropriate timestamp
-                    activeVideo.addEventListener('loadedmetadata', function() {
-                        const duration = activeVideo.duration;
-                        // If it's night, jump to the night section of the video
-                        if (isNight) {
-                            // For night, use the second half of the video
-                            const jumpToTime = (duration / 2) + (duration / 6);
-                            activeVideo.currentTime = jumpToTime;
+                    try {
+                        // Define a function to handle video loading and playback
+                        const setupVideo = () => {
+                            const duration = activeVideo.duration;
+                            
+                            // If it's night, jump to the night section of the video
+                            if (isNight) {
+                                // For night, use the second half of the video
+                                const jumpToTime = (duration / 2) + (duration / 6);
+                                activeVideo.currentTime = jumpToTime;
+                            } else {
+                                // For day, use the first part of the video
+                                const jumpToTime = duration / 6;
+                                activeVideo.currentTime = jumpToTime;
+                            }
+                            
+                            // Play video with reliability measures for TVs
+                            const playPromise = activeVideo.play();
+                            
+                            if (playPromise !== undefined) {
+                                playPromise.catch(error => {
+                                    console.warn('Auto-play prevented, trying with user interaction simulation:', error);
+                                    // Many TVs require this approach
+                                    document.addEventListener('click', function playVideoOnce() {
+                                        activeVideo.play();
+                                        document.removeEventListener('click', playVideoOnce);
+                                    }, { once: true });
+                                });
+                            }
+                        };
+                        
+                        // If video metadata is loaded, setup the video
+                        if (activeVideo.readyState >= 1) {
+                            setupVideo();
                         } else {
-                            // For day, use the first part of the video
-                            const jumpToTime = duration / 6;
-                            activeVideo.currentTime = jumpToTime;
+                            // Wait for metadata to load
+                            activeVideo.addEventListener('loadedmetadata', setupVideo, { once: true });
                         }
-                        activeVideo.play();
-                    });
-                    
-                    // In case the video is already loaded
-                    if (activeVideo.duration) {
-                        const duration = activeVideo.duration;
-                        if (isNight && activeVideoId === 'video-precipitation') {
-                            activeVideo.currentTime = (duration / 2) + (duration / 6);
-                        } else {
-                            activeVideo.currentTime = duration / 6;
-                        }
-                        activeVideo.play();
+                    } catch (e) {
+                        console.error('Error setting up precipitation video:', e);
                     }
                 } else {
-                    // For standard daytime videos, just play them
-                    activeVideo.play();
+                    // For standard videos
+                    try {
+                        // Play video with reliability measures for TVs
+                        const playPromise = activeVideo.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.warn('Auto-play prevented, will retry:', error);
+                                // TVs may need this fallback
+                                setTimeout(() => {
+                                    activeVideo.play().catch(e => console.warn('Final play attempt failed:', e));
+                                }, 1000);
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error playing standard video:', e);
+                    }
                 }
             }
         } else {
@@ -1545,10 +1588,57 @@ function setCurrentWeatherCode(code) {
     }, 500);
 }
 
+// Initialize the videos for better TV compatibility
+function initializeVideos() {
+    console.log('Initializing videos for TV compatibility');
+    
+    // Get all videos
+    const videos = document.querySelectorAll('.weather-video');
+    
+    videos.forEach(video => {
+        // Ensure videos have the right attributes
+        video.setAttribute('autoplay', '');
+        video.setAttribute('loop', '');
+        video.setAttribute('preload', 'auto');
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+        
+        // Add an error handler
+        video.addEventListener('error', (e) => {
+            console.error(`Error loading video ${video.id}:`, e);
+        });
+        
+        // Try to preload the video
+        try {
+            // Load the video data
+            video.load();
+            
+            // Set up event listeners
+            video.addEventListener('canplaythrough', () => {
+                console.log(`Video ${video.id} can play through`);
+            }, { once: true });
+        } catch (e) {
+            console.warn(`Couldn't preload video ${video.id}:`, e);
+        }
+    });
+    
+    // Add a global click handler to help with autoplay on TVs
+    document.addEventListener('click', () => {
+        const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+        if (activeVideo && activeVideo.paused) {
+            console.log('User interaction detected, playing active video');
+            activeVideo.play().catch(e => console.warn('Play after click failed:', e));
+        }
+    });
+}
+
 // Initialize the app with optimized settings
 document.addEventListener('DOMContentLoaded', () => {
     // Set extreme low performance for TV devices
     detectDevicePerformance();
+    
+    // Initialize video handling for TV compatibility
+    initializeVideos();
     
     // Initialize a single Skycons instance for all icons
     initializeSkycons();
@@ -1558,6 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     populateCityDropdown();
     fetchWeatherData();
     
-    // Update time initially
+    // Update time initially and start interval
     updateCurrentTime();
+    setInterval(updateCurrentTime, 60000);
 });

@@ -902,6 +902,7 @@ body {
     z-index: -1;
     pointer-events: none;
     background: transparent;
+    overflow: hidden; /* Prevent video overflow */
 }
 
 /* Video background for weather conditions - TV optimized */
@@ -918,6 +919,7 @@ body {
     transform: translateZ(0); /* Hardware acceleration for better performance */
     will-change: opacity; /* Hint for browser optimization */
     display: none; /* Initially hidden, will be made visible in JS */
+    z-index: -1; /* Ensure videos don't overlap UI elements */
 }
 
 /* Video background visibility classes for each weather condition */
@@ -1103,5 +1105,49 @@ body.weather-snowy.night #simple-background {
     }
     100% {
         background-position: 0% 50%;
+    }
+}
+
+/* TV-specific optimizations */
+@media screen and (min-width: 1920px) {
+    /* Higher opacity for better visibility on large TV screens */
+    body.weather-clear #video-clearsky,
+    body.weather-partly-cloudy #video-partly-cloudy,
+    body.weather-rainy #video-rain,
+    body.weather-snowy #video-precipitation,
+    body.weather-thunder #video-precipitation {
+        opacity: 1;
+    }
+    
+    /* Ensure videos are visible on TV screens */
+    .weather-video {
+        display: none;
+        transition: opacity 0.5s ease; /* Faster transition for TVs */
+    }
+    
+    /* Force hardware acceleration for TV browsers */
+    #video-container {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000px;
+        will-change: transform, opacity;
+    }
+}
+
+/* Additional hack for some Smart TVs that need !important */
+@media screen and (min-width: 1280px) and (max-height: 720px), 
+       screen and (min-width: 1920px) and (max-height: 1080px) {
+    body[class*="weather-"] .weather-video {
+        z-index: -1 !important;
+    }
+    
+    /* Force display for active weather video */
+    body.weather-clear #video-clearsky,
+    body.weather-partly-cloudy #video-partly-cloudy,
+    body.weather-rainy #video-rain,
+    body.weather-snowy #video-precipitation,
+    body.weather-thunder #video-precipitation {
+        display: block !important;
+        opacity: 1 !important;
     }
 }

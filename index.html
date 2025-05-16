@@ -11,6 +11,8 @@
     <script src="skycons.js"></script>
     <!-- Include cloud decorations -->
     <script src="components/decorations/clouds.js"></script>
+    <!-- Include TV compatibility script -->
+    <script src="tv-compatibility.js"></script>
 </head>
 <body>
     <!-- Simple gradient background instead of Vanta.js -->
@@ -20,22 +22,22 @@
     <!-- Each video is now hidden by default and lazily loaded -->
     <div id="video-container">
         <!-- Clear sky video -->
-        <video id="video-clearsky" class="weather-video" muted playsinline>
+        <video id="video-clearsky" class="weather-video" muted playsinline autoplay loop>
             <source src="components/decorations/clearsky_daytime.mp4" type="video/mp4">
         </video>
         
         <!-- Partly cloudy video -->
-        <video id="video-partly-cloudy" class="weather-video" muted playsinline>
+        <video id="video-partly-cloudy" class="weather-video" muted playsinline autoplay loop>
             <source src="components/decorations/partly_cloudy_daytime.mp4" type="video/mp4">
         </video>
         
         <!-- Rain video -->
-        <video id="video-rain" class="weather-video" muted playsinline>
+        <video id="video-rain" class="weather-video" muted playsinline autoplay loop>
             <source src="components/decorations/rain_daytime.mp4" type="video/mp4">
         </video>
         
         <!-- Precipitation video for snow/thunderstorm -->
-        <video id="video-precipitation" class="weather-video" muted playsinline>
+        <video id="video-precipitation" class="weather-video" muted playsinline autoplay loop>
             <source src="components/decorations/rain_snow_thunderstorm_night_day.mp4" type="video/mp4">
         </video>
     </div>
