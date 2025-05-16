@@ -827,7 +827,7 @@ async function fetchWeatherData() {
                     dayDiv.innerHTML = `
                         <div class="day-name">${dayName}</div>
                         <div class="forecast-icon">
-                            <canvas id="${iconId}" width="64" height="64"></canvas>
+                            <canvas id="${iconId}" width="80" height="80"></canvas>
                         </div>
                         <div class="forecast-temp">${tempMin !== undefined ? Math.round(tempMin) + '°' : ''} / ${tempMax !== undefined ? Math.round(tempMax) + '°' : ''}</div>
                         <div class="forecast-desc">${desc}</div>

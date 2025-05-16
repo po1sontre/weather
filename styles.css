@@ -237,13 +237,13 @@ body {
   justify-content: center;
   align-items: center;
   margin: 0.5rem 0;
-  min-height: 128px;
+  min-height: 125px;
   position: relative;
 }
 
 .weather-icon canvas {
-  width: 128px !important;
-  height: 128px !important;
+  width: 125px !important;
+  height: 125px !important;
   display: block;
   filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
 }
@@ -278,10 +278,10 @@ body {
   scrollbar-color: var(--primary-color) rgba(255,255,255,0.1);
 }
 
-/* Forecast Day */
+/* Forecast Day - Better spacing for larger icons */
 .forecast-day {
   text-align: center;
-  padding: 1.5rem;
+  padding: 1.8rem; /* Increased from 1.5rem */
   background: var(--tv-glass-background);
   border-radius: 16px;
   min-width: 0;
@@ -302,10 +302,10 @@ body {
 }
 
 .forecast-day .day-name {
-  font-size: 1.4rem;
+  font-size: 1.6rem; /* Increased from 1.4rem */
   font-weight: 700;
   color: var(--text-color);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem; /* Increased from 0.6rem */
   letter-spacing: 0.5px;
   text-transform: uppercase;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -316,24 +316,24 @@ body {
   justify-content: center;
   align-items: center;
   margin: 0.7rem 0;
-  min-height: 64px;
+  min-height: 80px;
   position: relative;
 }
 
 .forecast-day .forecast-icon canvas {
-  width: 64px !important;
-  height: 64px !important;
+  width: 80px !important;
+  height: 80px !important;
   display: block;
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.3));
 }
 
 .forecast-day .forecast-desc {
-  font-size: 1.1rem;
+  font-size: 1.2rem; /* Increased from 1.1rem */
   color: var(--text-color);
   text-align: center;
   font-weight: 500;
-  margin: 0.5rem 0;
-  min-height: 2.2rem;
+  margin: 0.7rem 0; /* Adjusted from 0.5rem */
+  min-height: 2.4rem; /* Increased from 2.2rem */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,10 +341,10 @@ body {
 }
 
 .forecast-day .forecast-temp {
-  font-size: 1.5rem;
+  font-size: 1.8rem; /* Increased from 1.5rem */
   font-weight: 700;
   color: var(--primary-color);
-  margin-top: 0.4rem;
+  margin-top: 0.6rem; /* Increased from 0.4rem */
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
@@ -1171,12 +1171,12 @@ canvas {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 64px;
+    height: 80px;
     width: 100%;
 }
 
 .static-icon i {
-    font-size: 32px;
+    font-size: 42px;
     color: #FFFFFF;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
