@@ -902,7 +902,6 @@ body {
     z-index: -1;
     pointer-events: none;
     background: transparent;
-    overflow: hidden; /* Contain all videos within boundaries */
 }
 
 /* Video background for weather conditions - TV optimized */
@@ -914,15 +913,14 @@ body {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transform: translateZ(0); /* Hardware acceleration */
-    will-change: opacity; /* Optimization hint */
-    display: none; /* Hidden by default */
-    -webkit-transform: translate3d(0, 0, 0); /* Safari hardware acceleration */
-    -webkit-backface-visibility: hidden; /* Prevent flickering */
-    -webkit-perspective: 1000; /* Additional optimization */
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+    transform: translateZ(0); /* Hardware acceleration for better performance */
+    will-change: opacity; /* Hint for browser optimization */
+    display: none; /* Initially hidden, will be made visible in JS */
 }
 
-/* Video background visibility classes for each weather condition - Simplified for TV */
+/* Video background visibility classes for each weather condition */
 body.weather-clear #video-clearsky {
     opacity: 0.9;
     display: block;
@@ -944,9 +942,9 @@ body.weather-thunder #video-precipitation {
     display: block;
 }
 
-/* Night mode handling for videos - Simplified */
+/* Night mode handling for videos */
 body.night #video-precipitation {
-    opacity: 0.8;
+    opacity: 0.8; /* Slightly lower opacity at night */
 }
 
 /* Clear sky - Day: Bright blue to lighter blue */
@@ -1106,42 +1104,4 @@ body.weather-snowy.night #simple-background {
     100% {
         background-position: 0% 50%;
     }
-}
-
-/* TV-specific optimizations */
-body.tv-device .weather-video {
-    /* Enhanced hardware acceleration */
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
-    -webkit-backface-visibility: hidden;
-    -webkit-perspective: 1000;
-    will-change: contents;
-}
-
-/* Remove transitions for TVs to improve performance */
-body.tv-device * {
-    transition: none !important;
-    animation: none !important;
-}
-
-/* Simplified backgrounds for TVs */
-body.tv-device #simple-background {
-    opacity: 1 !important;
-}
-
-/* Ensure videos display correctly on TVs */
-body.tv-device .weather-video {
-    opacity: 1;
-    z-index: -2;
-}
-
-/* TV-specific weather classes with higher performance */
-body.tv-device.weather-clear #video-clearsky,
-body.tv-device.weather-partly-cloudy #video-partly-cloudy,
-body.tv-device.weather-rainy #video-rain,
-body.tv-device.weather-snowy #video-precipitation,
-body.tv-device.weather-thunder #video-precipitation {
-    opacity: 1 !important;
-    display: block !important;
-    z-index: -2;
 }

@@ -1020,20 +1020,13 @@ const ICON_COLORS = {
 let isLowEndDevice = true; // Default to low performance
 let devicePerformanceScore = 1; // Default to very low performance (1 out of 10)
 
-// Enhanced function to detect device performance with better TV detection
+// Drastically simplified function to detect device performance
 function detectDevicePerformance() {
     // Default score (higher is better)
     let score = 5;
     
-    // Check if it's a TV device more thoroughly
+    // Check if it's a TV device
     const userAgent = navigator.userAgent.toLowerCase();
-    const screenWidth = window.screen.width || 0;
-    const screenHeight = window.screen.height || 0;
-    
-    // TV detection variables
-    let isTV = false;
-    
-    // Check common TV user agents
     if (
         userAgent.includes('tv') || 
         userAgent.includes('smart-tv') || 
@@ -1041,66 +1034,32 @@ function detectDevicePerformance() {
         userAgent.includes('appletv') || 
         userAgent.includes('googletv') || 
         userAgent.includes('webos') || 
-        userAgent.includes('tizen') ||
-        userAgent.includes('hbbtv') ||
-        userAgent.includes('philipstv') ||
-        userAgent.includes('netcast') ||
-        userAgent.includes('viera')
+        userAgent.includes('tizen')
     ) {
-        isTV = true;
-        console.log('TV device detected via user agent');
+        // Detected TV - reduce performance score
+        score -= 2;
+        console.log('TV device detected, reducing performance score');
     }
     
-    // Check for TV resolutions (typically 1920x1080 or higher in landscape)
-    if (!isTV && screenWidth >= 1920 && screenHeight >= 1080 && screenWidth > screenHeight) {
-        // Additional check to avoid misclassifying desktop monitors
-        // If the device has touch support, it's probably not a TV
-        if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
-            isTV = true;
-            console.log('TV device detected via screen resolution');
+    // Check for older browsers that might indicate older hardware
+    if (!window.IntersectionObserver || !window.ResizeObserver) {
+        score -= 1;
+        console.log('Older browser features detected, reducing performance score');
+    }
+    
+    // Check memory (if available)
+    if (navigator.deviceMemory) {
+        if (navigator.deviceMemory < 4) {
+            score -= Math.max(0, 3 - navigator.deviceMemory);
+            console.log(`Low memory (${navigator.deviceMemory}GB) detected, reducing performance score`);
         }
     }
     
-    // Apply TV optimizations
-    if (isTV) {
-        // For TVs, use a very low performance profile
-        score = 1; // Lowest score
-        
-        // Apply immediate TV-specific optimizations
-        console.log('Applying TV-specific optimizations');
-        
-        // Optimize video playback by ensuring videos are preloaded
-        document.querySelectorAll('.weather-video').forEach(video => {
-            // Set to 'true' for better performance, but still allow videos to preload
-            video.preload = 'auto';
-            
-            // Add error handlers for video elements
-            video.onerror = function(e) {
-                console.log(`Video error: ${e.target.src}`, e);
-                // On error, hide the video and show gradient background instead
-                e.target.style.display = 'none';
-            };
-        });
-    } else {
-        // For non-TV devices, use standard performance detection
-        
-        // Check for older browsers that might indicate older hardware
-        if (!window.IntersectionObserver || !window.ResizeObserver) {
+    // If device has limited hardware, detect it from CPU cores if available
+    if (navigator.hardwareConcurrency) {
+        if (navigator.hardwareConcurrency < 4) {
             score -= 1;
-        }
-        
-        // Check memory (if available)
-        if (navigator.deviceMemory) {
-            if (navigator.deviceMemory < 4) {
-                score -= Math.max(0, 3 - navigator.deviceMemory);
-            }
-        }
-        
-        // If device has limited hardware, detect it from CPU cores if available
-        if (navigator.hardwareConcurrency) {
-            if (navigator.hardwareConcurrency < 4) {
-                score -= 1;
-            }
+            console.log(`Limited CPU cores (${navigator.hardwareConcurrency}) detected, reducing performance score`);
         }
     }
     
@@ -1110,22 +1069,12 @@ function detectDevicePerformance() {
     // Update global variable
     devicePerformanceScore = score;
     
-    console.log(`Device performance score: ${score}/5 (${isTV ? 'TV' : 'non-TV'})`);
+    console.log(`Device performance score: ${score}/5`);
     
-    // Apply performance adaptations
-    if (score <= 2) {
-        // For low-performance devices (including TVs)
-        
-        // Disable complex visual effects
-        if (window.cloudDecorations) {
-            window.cloudDecorations.maxClouds = isTV ? 0 : 2; // No clouds for TVs
-        }
-        
-        // Simplify video handling for TVs
-        if (isTV) {
-            // Add a flag to document body
-            document.body.classList.add('tv-device');
-        }
+    // For very low-end devices, limit cloud decorations but don't disable completely
+    if (score <= 2 && window.cloudDecorations) {
+        window.cloudDecorations.maxClouds = 2; // Limit to 2 clouds maximum instead of disabling
+        console.log('Low performance device: limiting cloud decorations to 2 clouds');
     }
     
     return score;
@@ -1231,62 +1180,175 @@ function setWeatherBackground(code) {
     
     // Add appropriate weather class and effect
     let weatherClass = '';
+    let weatherEffect = '';
     let useVideoBackground = true; // Default to using video for all weather types
+    let activeVideoId = ''; // ID of the video element to use
     
-    // Simplified weather class mapping for better TV performance
     if (code >= 0 && code <= 1) {
         weatherClass = 'weather-clear';
+        activeVideoId = 'video-clearsky';
     } else if (code === 2) {
         weatherClass = 'weather-partly-cloudy';
+        activeVideoId = 'video-partly-cloudy';
     } else if (code === 3) {
         weatherClass = 'weather-cloudy';
         useVideoBackground = false; // No video for cloudy
     } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
         weatherClass = 'weather-rainy';
+        weatherEffect = 'rain';
+        activeVideoId = 'video-rain';
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
+        weatherEffect = 'snow';
+        activeVideoId = 'video-precipitation';
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
+        weatherEffect = 'fog';
         useVideoBackground = false; // No video for foggy
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
+        weatherEffect = 'rain';
+        activeVideoId = 'video-precipitation';
     } else {
         weatherClass = 'weather-clear';
+        activeVideoId = 'video-clearsky';
     }
     
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Handle cloud decorations container visibility
-    const cloudContainer = document.getElementById('cloud-decorations-container');
-    if (cloudContainer) {
-        cloudContainer.style.display = useVideoBackground ? 'none' : '';
-    }
-    
-    // Add weather effect if needed and not using video background
-    if (!useVideoBackground && devicePerformanceScore > 2) {
-        const weatherEffect = getWeatherEffect(code);
-        if (weatherEffect) {
-            const effectDiv = document.createElement('div');
-            effectDiv.className = `weather-effect ${weatherEffect}`;
-            document.body.appendChild(effectDiv);
+    // Handle all video backgrounds
+    const allVideos = document.querySelectorAll('.weather-video');
+    if (allVideos.length > 0) {
+        // First pause all videos
+        allVideos.forEach(video => {
+            if (video.id !== activeVideoId) {
+                video.pause();
+            }
+        });
+        
+        // Remove cloud decorations when using video background
+        if (useVideoBackground) {
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.innerHTML = ''; // Clear any existing clouds
+                cloudContainer.style.display = 'none'; // Hide the container
+            }
+            
+            // Handle the active video
+            const activeVideo = document.getElementById(activeVideoId);
+            if (activeVideo) {
+                // For precipitation video that has day/night sections
+                if (activeVideoId === 'video-precipitation') {
+                    // Set video current time based on day/night
+                    // Day footage is in the first half, night footage in the second half
+                    
+                    // Get video duration and set appropriate timestamp
+                    activeVideo.addEventListener('loadedmetadata', function() {
+                        const duration = activeVideo.duration;
+                        // If it's night, jump to the night section of the video
+                        if (isNight) {
+                            // For night, use the second half of the video
+                            const jumpToTime = (duration / 2) + (duration / 6);
+                            activeVideo.currentTime = jumpToTime;
+                        } else {
+                            // For day, use the first part of the video
+                            const jumpToTime = duration / 6;
+                            activeVideo.currentTime = jumpToTime;
+                        }
+                        activeVideo.play();
+                    });
+                    
+                    // In case the video is already loaded
+                    if (activeVideo.duration) {
+                        const duration = activeVideo.duration;
+                        if (isNight && activeVideoId === 'video-precipitation') {
+                            activeVideo.currentTime = (duration / 2) + (duration / 6);
+                        } else {
+                            activeVideo.currentTime = duration / 6;
+                        }
+                        activeVideo.play();
+                    }
+                } else {
+                    // For standard daytime videos, just play them
+                    activeVideo.play();
+                }
+            }
+        } else {
+            // Re-show cloud container for non-video weather conditions
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.style.display = ''; // Reset to default display
+            }
         }
     }
     
-    // The videos will be controlled through CSS classes
-    // No manual video manipulation needed - this is key for TV performance
-}
-
-// Helper function to determine weather effect type
-function getWeatherEffect(code) {
-    if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82) || code >= 95) {
-        return 'rain';
-    } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
-        return 'snow';
-    } else if (code === 45 || code === 48) {
-        return 'fog';
+    // Add weather effect if needed and not using video background
+    if (weatherEffect && !useVideoBackground && devicePerformanceScore > 2) {
+        const effectDiv = document.createElement('div');
+        effectDiv.className = `weather-effect ${weatherEffect}`;
+        document.body.appendChild(effectDiv);
     }
-    return '';
+    
+    // Trigger cloud decorations update if available
+    if (window.cloudDecorations && !useVideoBackground) {
+        // Wait a short moment for the weather class to apply
+        setTimeout(() => {
+            console.log('Triggering cloud decorations generation');
+            
+            // First check if the cloud container exists
+            let container = document.getElementById('cloud-decorations-container');
+            if (!container) {
+                console.log('Cloud container not found, creating it');
+                container = document.createElement('div');
+                container.id = 'cloud-decorations-container';
+                container.style.position = 'fixed';
+                container.style.top = '0';
+                container.style.left = '0';
+                container.style.width = '100%';
+                container.style.height = '100%';
+                container.style.zIndex = '-1';
+                container.style.pointerEvents = 'none';
+                document.body.appendChild(container);
+            }
+            
+            // If clouds.js script is not loaded yet, dynamically add it
+            if (!window.cloudDecorations.generate) {
+                console.log('Cloud decorations not fully loaded, loading script');
+                const script = document.createElement('script');
+                script.src = 'components/decorations/clouds.js';
+                script.onload = function() {
+                    console.log('Cloud decorations script loaded, initializing');
+                    if (window.cloudDecorations && window.cloudDecorations.init) {
+                        window.cloudDecorations.init();
+                    }
+                };
+                document.head.appendChild(script);
+            } else {
+                // Clouds script is loaded, generate clouds
+                if (typeof window.cloudDecorations.generate === 'function') {
+                    window.cloudDecorations.generate();
+                } else {
+                    console.error('Cloud decorations generate function not available');
+                }
+            }
+        }, 100);
+    } else if (!window.cloudDecorations && !useVideoBackground) {
+        console.log('Cloud decorations not available, skipping');
+        
+        // Try to load clouds.js if it's not loaded
+        const script = document.createElement('script');
+        script.src = 'components/decorations/clouds.js';
+        script.onload = function() {
+            console.log('Cloud decorations script loaded');
+            if (window.cloudDecorations && window.cloudDecorations.init) {
+                window.cloudDecorations.init();
+            }
+        };
+        document.head.appendChild(script);
+    } else if (useVideoBackground) {
+        console.log('Using video background - skipping cloud decorations');
+    }
 }
 
 // Update the displayStationWeather function to handle missing data
