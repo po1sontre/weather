@@ -795,7 +795,8 @@ async function fetchWeatherData() {
             // Create non-animated forecast icons for very low performance devices
             const useSimpleIcons = devicePerformanceScore <= 2;
             
-            for (let i = 0; i < Math.min(maxDays, forecastData.forecasts.length); i++) {
+            // Start from index 1 to skip today's forecast
+            for (let i = 1; i < Math.min(maxDays + 1, forecastData.forecasts.length); i++) {
                 const day = forecastData.forecasts[i];
                 const date = new Date(day.date);
                 const dayName = date.toLocaleDateString(lang, { weekday: 'short' });
@@ -803,7 +804,8 @@ async function fetchWeatherData() {
                 const desc = day.symbol?.description || '';
                 const tempMax = day.temperatureMax;
                 const tempMin = day.temperatureMin;
-                const iconId = `forecast-icon-${i}`;
+                const displayIndex = i - 1; // Adjust index for display (0-based)
+                const iconId = `forecast-icon-${displayIndex}`;
                 
                 // Create forecast day element
                 const dayDiv = document.createElement('div');
@@ -835,7 +837,7 @@ async function fetchWeatherData() {
                 
                 // Standardize and set the weather icon
                 const wmoCode = standardizeWeatherCode(code, desc);
-                console.log(`Forecast day ${i}: ${dayName}, code: ${code} → ${wmoCode}, desc: ${desc}`);
+                console.log(`Forecast day ${displayIndex}: ${dayName}, code: ${code} → ${wmoCode}, desc: ${desc}`);
                 
                 // Skip Skycons setup for simple icons mode
                 if (useSimpleIcons) continue;
