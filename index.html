@@ -16,26 +16,25 @@
     <!-- Simple gradient background instead of Vanta.js -->
     <div id="simple-background"></div>
     
-    <!-- TV-Friendly Video backgrounds for different weather conditions -->
-    <!-- Each video is now hidden by default and lazily loaded -->
+    <!-- Optimized TV-Friendly Video backgrounds -->
     <div id="video-container">
-        <!-- Clear sky video -->
-        <video id="video-clearsky" class="weather-video" muted playsinline>
+        <!-- Clear sky video - added autoplay and loop, plus playsinline -->
+        <video id="video-clearsky" class="weather-video" muted playsinline autoplay loop preload="auto">
             <source src="components/decorations/clearsky_daytime.mp4" type="video/mp4">
         </video>
         
-        <!-- Partly cloudy video -->
-        <video id="video-partly-cloudy" class="weather-video" muted playsinline>
+        <!-- Partly cloudy video - added autoplay and loop -->
+        <video id="video-partly-cloudy" class="weather-video" muted playsinline autoplay loop preload="auto">
             <source src="components/decorations/partly_cloudy_daytime.mp4" type="video/mp4">
         </video>
         
-        <!-- Rain video -->
-        <video id="video-rain" class="weather-video" muted playsinline>
+        <!-- Rain video - added autoplay and loop -->
+        <video id="video-rain" class="weather-video" muted playsinline autoplay loop preload="auto">
             <source src="components/decorations/rain_daytime.mp4" type="video/mp4">
         </video>
         
-        <!-- Precipitation video for snow/thunderstorm -->
-        <video id="video-precipitation" class="weather-video" muted playsinline>
+        <!-- Precipitation video for snow/thunderstorm - added autoplay and loop -->
+        <video id="video-precipitation" class="weather-video" muted playsinline autoplay loop preload="auto">
             <source src="components/decorations/rain_snow_thunderstorm_night_day.mp4" type="video/mp4">
         </video>
     </div>
