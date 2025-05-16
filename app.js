@@ -1181,41 +1181,117 @@ function setWeatherBackground(code) {
     // Add appropriate weather class and effect
     let weatherClass = '';
     let weatherEffect = '';
+    let useVideoBackground = true; // Default to using video for all weather types
+    let activeVideoId = ''; // ID of the video element to use
     
     if (code >= 0 && code <= 1) {
         weatherClass = 'weather-clear';
+        activeVideoId = 'video-clearsky';
     } else if (code === 2) {
         weatherClass = 'weather-partly-cloudy';
+        activeVideoId = 'video-partly-cloudy';
     } else if (code === 3) {
         weatherClass = 'weather-cloudy';
+        useVideoBackground = false; // No video for cloudy
     } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
         weatherClass = 'weather-rainy';
         weatherEffect = 'rain';
+        activeVideoId = 'video-rain';
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
         weatherEffect = 'snow';
+        activeVideoId = 'video-precipitation';
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
         weatherEffect = 'fog';
+        useVideoBackground = false; // No video for foggy
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
         weatherEffect = 'rain';
+        activeVideoId = 'video-precipitation';
     } else {
         weatherClass = 'weather-clear';
+        activeVideoId = 'video-clearsky';
     }
     
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Add weather effect if needed and not on a low-end device
-    if (weatherEffect && devicePerformanceScore > 2) {
+    // Handle all video backgrounds
+    const allVideos = document.querySelectorAll('.weather-video');
+    if (allVideos.length > 0) {
+        // First pause all videos
+        allVideos.forEach(video => {
+            if (video.id !== activeVideoId) {
+                video.pause();
+            }
+        });
+        
+        // Remove cloud decorations when using video background
+        if (useVideoBackground) {
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.innerHTML = ''; // Clear any existing clouds
+                cloudContainer.style.display = 'none'; // Hide the container
+            }
+            
+            // Handle the active video
+            const activeVideo = document.getElementById(activeVideoId);
+            if (activeVideo) {
+                // For precipitation video that has day/night sections
+                if (activeVideoId === 'video-precipitation') {
+                    // Set video current time based on day/night
+                    // Day footage is in the first half, night footage in the second half
+                    
+                    // Get video duration and set appropriate timestamp
+                    activeVideo.addEventListener('loadedmetadata', function() {
+                        const duration = activeVideo.duration;
+                        // If it's night, jump to the night section of the video
+                        if (isNight) {
+                            // For night, use the second half of the video
+                            const jumpToTime = (duration / 2) + (duration / 6);
+                            activeVideo.currentTime = jumpToTime;
+                        } else {
+                            // For day, use the first part of the video
+                            const jumpToTime = duration / 6;
+                            activeVideo.currentTime = jumpToTime;
+                        }
+                        activeVideo.play();
+                    });
+                    
+                    // In case the video is already loaded
+                    if (activeVideo.duration) {
+                        const duration = activeVideo.duration;
+                        if (isNight && activeVideoId === 'video-precipitation') {
+                            activeVideo.currentTime = (duration / 2) + (duration / 6);
+                        } else {
+                            activeVideo.currentTime = duration / 6;
+                        }
+                        activeVideo.play();
+                    }
+                } else {
+                    // For standard daytime videos, just play them
+                    activeVideo.play();
+                }
+            }
+        } else {
+            // Re-show cloud container for non-video weather conditions
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.style.display = ''; // Reset to default display
+            }
+        }
+    }
+    
+    // Add weather effect if needed and not using video background
+    if (weatherEffect && !useVideoBackground && devicePerformanceScore > 2) {
         const effectDiv = document.createElement('div');
         effectDiv.className = `weather-effect ${weatherEffect}`;
         document.body.appendChild(effectDiv);
     }
     
     // Trigger cloud decorations update if available
-    if (window.cloudDecorations) {
+    if (window.cloudDecorations && !useVideoBackground) {
         // Wait a short moment for the weather class to apply
         setTimeout(() => {
             console.log('Triggering cloud decorations generation');
@@ -1257,7 +1333,7 @@ function setWeatherBackground(code) {
                 }
             }
         }, 100);
-    } else {
+    } else if (!window.cloudDecorations && !useVideoBackground) {
         console.log('Cloud decorations not available, skipping');
         
         // Try to load clouds.js if it's not loaded
@@ -1270,6 +1346,8 @@ function setWeatherBackground(code) {
             }
         };
         document.head.appendChild(script);
+    } else if (useVideoBackground) {
+        console.log('Using video background - skipping cloud decorations');
     }
 }
 

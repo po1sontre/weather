@@ -888,6 +888,43 @@ body {
     transition: background 1.5s ease;
 }
 
+/* Video background for weather conditions */
+.weather-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+}
+
+/* Video background visibility classes for each weather condition */
+body.weather-clear #video-clearsky {
+    opacity: 0.9;
+}
+
+body.weather-partly-cloudy #video-partly-cloudy {
+    opacity: 0.9;
+}
+
+body.weather-rainy #video-rain {
+    opacity: 0.9;
+}
+
+body.weather-snowy #video-precipitation,
+body.weather-thunder #video-precipitation {
+    opacity: 0.9;
+}
+
+/* Night mode handling for videos */
+body.night #video-precipitation {
+    opacity: 0.8; /* Slightly lower opacity at night */
+}
+
 /* Clear sky - Day: Bright blue to lighter blue */
 body.weather-clear #simple-background {
     background: linear-gradient(to bottom, #1e88e5, #90caf9);
