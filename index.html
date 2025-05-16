@@ -16,22 +16,29 @@
     <!-- Simple gradient background instead of Vanta.js -->
     <div id="simple-background"></div>
     
-    <!-- Video backgrounds for different weather conditions -->
-    <video id="video-clearsky" class="weather-video" autoplay muted loop playsinline>
-        <source src="components/decorations/clearsky_daytime.mp4" type="video/mp4">
-    </video>
-    
-    <video id="video-partly-cloudy" class="weather-video" autoplay muted loop playsinline>
-        <source src="components/decorations/partly_cloudy_daytime.mp4" type="video/mp4">
-    </video>
-    
-    <video id="video-rain" class="weather-video" autoplay muted loop playsinline>
-        <source src="components/decorations/rain_daytime.mp4" type="video/mp4">
-    </video>
-    
-    <video id="video-precipitation" class="weather-video" autoplay muted loop playsinline>
-        <source src="components/decorations/rain_snow_thunderstorm_night_day.mp4" type="video/mp4">
-    </video>
+    <!-- TV-Friendly Video backgrounds for different weather conditions -->
+    <!-- Each video is now hidden by default and lazily loaded -->
+    <div id="video-container">
+        <!-- Clear sky video -->
+        <video id="video-clearsky" class="weather-video" muted playsinline>
+            <source src="components/decorations/clearsky_daytime.mp4" type="video/mp4">
+        </video>
+        
+        <!-- Partly cloudy video -->
+        <video id="video-partly-cloudy" class="weather-video" muted playsinline>
+            <source src="components/decorations/partly_cloudy_daytime.mp4" type="video/mp4">
+        </video>
+        
+        <!-- Rain video -->
+        <video id="video-rain" class="weather-video" muted playsinline>
+            <source src="components/decorations/rain_daytime.mp4" type="video/mp4">
+        </video>
+        
+        <!-- Precipitation video for snow/thunderstorm -->
+        <video id="video-precipitation" class="weather-video" muted playsinline>
+            <source src="components/decorations/rain_snow_thunderstorm_night_day.mp4" type="video/mp4">
+        </video>
+    </div>
     
     <!-- Cloud decorations container -->
     <div id="cloud-decorations-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;">

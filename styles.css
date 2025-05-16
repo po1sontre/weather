@@ -892,36 +892,54 @@ body {
     transition: background 1.5s ease;
 }
 
-/* Video background for weather conditions */
-.weather-video {
+/* Video container for TV compatibility */
+#video-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
     z-index: -1;
+    pointer-events: none;
+    background: transparent;
+}
+
+/* Video background for weather conditions - TV optimized */
+.weather-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     opacity: 0;
     transition: opacity 1.5s ease;
     pointer-events: none;
+    transform: translateZ(0); /* Hardware acceleration for better performance */
+    will-change: opacity; /* Hint for browser optimization */
+    display: none; /* Initially hidden, will be made visible in JS */
 }
 
 /* Video background visibility classes for each weather condition */
 body.weather-clear #video-clearsky {
     opacity: 0.9;
+    display: block;
 }
 
 body.weather-partly-cloudy #video-partly-cloudy {
     opacity: 0.9;
+    display: block;
 }
 
 body.weather-rainy #video-rain {
     opacity: 0.9;
+    display: block;
 }
 
 body.weather-snowy #video-precipitation,
 body.weather-thunder #video-precipitation {
     opacity: 0.9;
+    display: block;
 }
 
 /* Night mode handling for videos */
