@@ -92,30 +92,24 @@ function createCloudElement(type) {
 
 // Generate cloud decorations based on current weather
 function generateClouds() {
-  // Clear existing clouds
+  // First clear existing clouds
   clearClouds();
   
-  // Get or create the cloud container
-  let container = document.getElementById('cloud-decorations-container');
+  // Find the container for clouds
+  const container = document.getElementById('cloud-decorations-container');
   if (!container) {
-    console.log('Creating cloud container element');
-    container = document.createElement('div');
-    container.id = 'cloud-decorations-container';
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.zIndex = '-1';
-    container.style.pointerEvents = 'none';
-    document.body.appendChild(container);
+    console.log('Cloud container not found');
+    return;
   }
   
-  // Check which weather class is currently active
+  // Define weather classes
   const weatherClasses = ['weather-clear', 'weather-partly-cloudy', 'weather-cloudy', 
-                          'weather-rainy', 'weather-snowy', 'weather-foggy', 'weather-thunder'];
+                         'weather-rainy', 'weather-snowy', 'weather-foggy', 'weather-thunder'];
   
-  let activeWeatherClass = '';
+  // Determine active weather class
+  let activeWeatherClass = null;
+  
+  // First check body class list
   for (const weatherClass of weatherClasses) {
     if (document.body.classList.contains(weatherClass)) {
       activeWeatherClass = weatherClass;
@@ -124,9 +118,37 @@ function generateClouds() {
     }
   }
   
+  // If no class found, check the data-current-weather-code attribute on body
+  if (!activeWeatherClass && document.body.dataset.currentWeatherCode) {
+    const weatherCode = parseInt(document.body.dataset.currentWeatherCode);
+    console.log(`No weather class found, using weather code from dataset: ${weatherCode}`);
+    
+    // Map the weather code to a weather class
+    if (weatherCode <= 1) {
+      activeWeatherClass = 'weather-clear';
+    } else if (weatherCode === 2) {
+      activeWeatherClass = 'weather-partly-cloudy';
+    } else if (weatherCode === 3) {
+      activeWeatherClass = 'weather-cloudy';
+    } else if ((weatherCode >= 51 && weatherCode <= 65) || (weatherCode >= 80 && weatherCode <= 82)) {
+      activeWeatherClass = 'weather-rainy';
+    } else if ((weatherCode >= 71 && weatherCode <= 77) || (weatherCode >= 85 && weatherCode <= 86)) {
+      activeWeatherClass = 'weather-snowy';
+    } else if (weatherCode >= 95) {
+      activeWeatherClass = 'weather-stormy';
+    } else {
+      // Default to partly cloudy if code doesn't match known patterns
+      activeWeatherClass = 'weather-partly-cloudy';
+    }
+    
+    console.log(`Mapped weather code ${weatherCode} to class ${activeWeatherClass}`);
+  }
+  
   if (!activeWeatherClass) {
     console.log('No active weather class found');
-    return;
+    // Default to partly cloudy if no class or code is found
+    activeWeatherClass = 'weather-partly-cloudy';
+    console.log('Defaulting to weather-partly-cloudy');
   }
   
   // Get max clouds limit if it exists (for performance optimization)

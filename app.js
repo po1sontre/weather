@@ -201,6 +201,20 @@ function getUrlParameter(name) {
     return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
+// Helper function to safely parse numerical values
+function safeParseFloat(value) {
+    if (value === undefined || value === null) return NaN;
+    
+    // Convert to string if it's not already
+    let strValue = String(value);
+    
+    // Replace comma with dot (European decimal notation)
+    strValue = strValue.replace(',', '.');
+    
+    // Parse and return the result
+    return parseFloat(strValue);
+}
+
 // Initialize language from URL parameter or use default
 function initializeLanguage() {
     const langParam = getUrlParameter('lang');
@@ -244,20 +258,20 @@ async function getDistrictIdForCity(cityName) {
         const districtsRes = await fetch('https://api-weather.services.siag.it/api/v2/district');
         const districtsData = await districtsRes.json();
         
-        // Then, get all stations to map cities to districts
-        const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
+        // Use the OpenDataHub Tourism API to get station data
+        const stationsRes = await fetch('https://tourism.api.opendatahub.com/v1/Weather/Realtime');
         const stationsData = await stationsRes.json();
         
         // Find the station that matches our city name
         const normalizedCityName = cityName.toLowerCase().trim();
-        const matchingStation = stationsData.rows.find(station => 
+        const matchingStation = stationsData.find(station => 
             station.name.toLowerCase().includes(normalizedCityName)
         );
         
         if (matchingStation) {
             // Find the district that contains this station's coordinates
-            const stationLat = matchingStation.latitude;
-            const stationLon = matchingStation.longitude;
+            const stationLat = safeParseFloat(matchingStation.latitude);
+            const stationLon = safeParseFloat(matchingStation.longitude);
             
             // For each district, check if the station is within its bounds
             // For now, we'll use a simple approach: find the district with the closest center
@@ -645,30 +659,100 @@ async function fetchWeatherData() {
         let foundStation = null;
         let districtId = districtParam ? parseInt(districtParam, 10) : 1; // Use district from URL parameter if available
 
+        // Fetch stations using the OpenDataHub Tourism API
+        const response = await fetch('https://tourism.api.opendatahub.com/v1/Weather/Realtime');
+        const stationsData = await response.json();
+        
+        // Filter to only include valid stations with temperature data
+        const validStations = stationsData.filter(station => 
+            isValidStation(station) && station.t !== undefined
+        );
+        
+        console.log(`Found ${validStations.length} valid stations with temperature data`);
+
         if (stationParam || cityParam) {
-            // Fetch stations list
-            const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
-            const stationsData = await stationsRes.json();
             if (stationParam) {
-                foundStation = stationsData.rows.find(s => s.code.toLowerCase() === stationParam.toLowerCase());
+                foundStation = validStations.find(s => s.code.toLowerCase() === stationParam.toLowerCase());
             } else if (cityParam) {
-                foundStation = stationsData.rows.find(s => s.name.toLowerCase() === cityParam.toLowerCase());
+                foundStation = validStations.find(s => 
+                    s.name.toLowerCase().includes(cityParam.toLowerCase())
+                );
                 // Only get district ID for the city if not already specified in URL
-                if (!districtParam) {
+                if (!districtParam && foundStation) {
                     districtId = await getDistrictIdForCity(cityParam);
                 }
             }
             if (foundStation) {
                 displayStationWeather(foundStation);
+            } else {
+                console.log(`No valid station found for ${stationParam || cityParam}, using default`);
+                // If specified station/city not found or invalid, use a default valid station
+                foundStation = validStations.find(s => 
+                    s.name.toLowerCase().includes('bolzano') || 
+                    s.name.toLowerCase().includes('bozen')
+                ) || validStations[0];
+                
+                if (foundStation) {
+                    displayStationWeather(foundStation);
+                    console.log(`Fallback to station: ${foundStation.name}`);
+                }
             }
         } else if (latParam && lngParam) {
-            // Fetch nearest station by lat/lng
-            const stationsRes = await fetch(`https://api-weather.services.siag.it/api/v2/station?longitude=${lngParam}&latitude=${latParam}&numStations=1&visibility=1`);
-            const stationsData = await stationsRes.json();
-            if (stationsData.rows && stationsData.rows.length > 0) {
-                foundStation = stationsData.rows[0];
-                displayStationWeather(foundStation);
+            // Calculate distances to find nearest station
+            const lat = parseFloat(latParam);
+            const lng = parseFloat(lngParam);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                // Find stations with valid coordinates
+                const stationsWithCoords = validStations.filter(station => {
+                    const sLat = safeParseFloat(station.latitude);
+                    const sLng = safeParseFloat(station.longitude);
+                    return !isNaN(sLat) && !isNaN(sLng);
+                });
+                
+                // Calculate distance for each station
+                const stationsWithDistance = stationsWithCoords.map(station => {
+                    const sLat = safeParseFloat(station.latitude);
+                    const sLng = safeParseFloat(station.longitude);
+                    const distance = Math.sqrt(
+                        Math.pow(lat - sLat, 2) + 
+                        Math.pow(lng - sLng, 2)
+                    );
+                    return { ...station, distance };
+                });
+                
+                // Sort by distance
+                stationsWithDistance.sort((a, b) => a.distance - b.distance);
+                
+                if (stationsWithDistance.length > 0) {
+                    foundStation = stationsWithDistance[0];
+                    displayStationWeather(foundStation);
+                    console.log(`Using nearest station: ${foundStation.name}`);
+                }
             }
+        } else {
+            // No parameters provided - use default location (Bolzano)
+            // Look for Bolzano station among valid stations
+            foundStation = validStations.find(s => 
+                s.name.toLowerCase().includes('bolzano') || 
+                s.name.toLowerCase().includes('bozen')
+            );
+            
+            if (foundStation) {
+                displayStationWeather(foundStation);
+                console.log("Using default location: Bolzano");
+            } else if (validStations.length > 0) {
+                // If Bolzano not found, use first valid station
+                foundStation = validStations[0];
+                displayStationWeather(foundStation);
+                console.log(`Using first valid station as default: ${foundStation.name}`);
+            } else {
+                console.error("No valid stations found with temperature data");
+                displayError(TRANSLATIONS[currentLang]?.error || 'No valid weather stations available.');
+            }
+            
+            // Use Bolzano district (ID: 1) by default
+            districtId = 1;
         }
 
         // Show forecast for the district
@@ -751,28 +835,14 @@ async function fetchWeatherData() {
                 }
                 
                 // Add icon immediately after creating the element
-                    const iconElement = document.getElementById(iconId);
-                    if (iconElement) {
+                const iconElement = document.getElementById(iconId);
+                if (iconElement) {
                     skycons.default.add(iconId, iconType);
                     console.log(`Added forecast icon ${iconId} with type ${iconType}`);
-                    } else {
-                        console.error(`Could not find element with ID: ${iconId}`);
-                    }
+                } else {
+                    console.error(`Could not find element with ID: ${iconId}`);
+                }
             }
-        }
-        
-        // If no city/station/lat-lng, show nothing or a message
-        if (!foundStation && !latParam && !lngParam) {
-            const locElem = document.querySelector('.location');
-            if (locElem) locElem.textContent = '';
-            const tempElem = document.querySelector('.temperature');
-            if (tempElem) tempElem.textContent = '';
-            const humidityElem = document.querySelector('.humidity');
-            if (humidityElem) humidityElem.textContent = '';
-            const windElem = document.querySelector('.wind');
-            if (windElem) windElem.textContent = '';
-            if (forecastElem) forecastElem.innerHTML = '';
-            updateCurrentTime();
         }
 
         // Update ad text with current language
@@ -785,11 +855,91 @@ async function fetchWeatherData() {
 
 // Function to check if a station has valid weather data
 function isValidStation(station) {
-    return station && 
-           station.name && 
-           station.t !== undefined && 
-           station.rh !== undefined && 
-           station.ff !== undefined;
+    // Basic station validation
+    if (!station || !station.name || station.name.trim() === '') {
+        console.log('Invalid station or name:', station?.name || 'unknown');
+        return false;
+    }
+    
+    try {
+        // Temperature validation - must be a valid number in a plausible range
+        const temp = safeParseFloat(station.t);
+        if (isNaN(temp) || temp === null || temp === undefined || 
+            // Check for implausible temperatures (-50°C to +60°C is reasonable range)
+            temp < -50 || temp > 60) {
+            console.log('Invalid temperature for', station.name, ':', station.t);
+            return false;
+        }
+        
+        // Humidity validation - must be a valid percentage
+        const humidity = safeParseFloat(station.rh);
+        if (isNaN(humidity) || humidity < 0 || humidity > 100) {
+            console.log('Invalid humidity for', station.name, ':', station.rh);
+            return false;
+        }
+        
+        // Wind speed validation - must be a valid number
+        const windSpeed = safeParseFloat(station.ff);
+        if (isNaN(windSpeed) || windSpeed < 0 || windSpeed > 200) {
+            console.log('Invalid wind speed for', station.name, ':', station.ff);
+            return false;
+        }
+        
+        // Coordinate validation
+        let lat = station.latitude;
+        let lon = station.longitude;
+        
+        // Handle both string and number formats
+        if (typeof lat === 'string') {
+            // European format may use commas for decimal points
+            lat = lat.replace(',', '.');
+        }
+        if (typeof lon === 'string') {
+            lon = lon.replace(',', '.');
+        }
+        
+        // Convert to numbers
+        lat = parseFloat(lat);
+        lon = parseFloat(lon);
+        
+        // Validate coordinates are in reasonable ranges
+        // Latitude: -90 to 90, Longitude: -180 to 180
+        if (isNaN(lat) || isNaN(lon) || 
+            !lat || !lon ||
+            lat < -90 || lat > 90 || 
+            lon < -180 || lon > 180) {
+            console.log('Invalid coordinates for', station.name, ':', station.latitude, station.longitude);
+            return false;
+        }
+        
+        // Check for "missing value" indicators like "--" or empty strings
+        if (station.t === '--' || station.rh === '--' || station.ff === '--') {
+            console.log('Contains placeholder data for', station.name);
+            return false;
+        }
+        
+        // Ensure lastUpdated is valid
+        if (!station.lastUpdated || typeof station.lastUpdated !== 'string') {
+            console.log('Missing or invalid lastUpdated timestamp for', station.name);
+            return false;
+        }
+        
+        // Check if timestamp is recent (within last 24 hours)
+        const lastUpdated = new Date(station.lastUpdated);
+        const now = new Date();
+        const diffHours = (now - lastUpdated) / (1000 * 60 * 60);
+        
+        if (isNaN(lastUpdated.getTime()) || diffHours > 24) {
+            console.log('Outdated data for', station.name, ':', station.lastUpdated);
+            return false;
+        }
+        
+        // All checks passed
+        return true;
+    } catch (error) {
+        console.error('Error validating station', station.name, error);
+        return false;
+    }
 }
 
 // Function to clean station name
@@ -806,12 +956,20 @@ function cleanStationName(name) {
 // Function to populate the city dropdown
 async function populateCityDropdown() {
     try {
-        const stationsRes = await fetch('https://api-weather.services.siag.it/api/v2/station/');
-        const stationsData = await stationsRes.json();
+        // Use the OpenDataHub Tourism API for consistency
+        const response = await fetch('https://tourism.api.opendatahub.com/v1/Weather/Realtime');
+        const stationsData = await response.json();
         
-        // Filter and sort stations
-        const validStations = stationsData.rows
-            .filter(isValidStation)
+        // Filter for stations with valid data only
+        const validStations = stationsData
+            .filter(station => 
+                // Use our isValidStation function for consistent validation
+                isValidStation(station) && 
+                // Ensure the required weather properties exist
+                station.t !== undefined && 
+                station.name && 
+                station.name.trim() !== ''
+            )
             .map(station => ({
                 ...station,
                 cleanName: cleanStationName(station.name)
@@ -827,6 +985,8 @@ async function populateCityDropdown() {
                 return acc;
             }
         }, []);
+
+        console.log(`Found ${uniqueStations.length} valid cities with weather data out of ${stationsData.length} total stations`);
 
         // Update the dropdown
         const citySelect = document.getElementById('city-select');
@@ -938,46 +1098,58 @@ function initializeSkycons() {
 
 // Function to set the skycon based on weather code
 function setWeatherIcon(code) {
-    console.log(`Setting weather icon for code: ${code}`);
+    // Get current icon canvas
+    const iconCanvas = document.getElementById('current-icon');
+    if (!iconCanvas) return;
     
-    // Ensure code is a number and has a valid mapping
-    const numericCode = parseInt(code, 10) || 2; // Default to partly cloudy (2) if parsing fails
+    // Set weather code in body dataset for cloud decorations
+    setCurrentWeatherCode(code);
     
-    // Get the appropriate icon type based on time of day and weather
+    // Determine if it's nighttime to show the night icon variant
     const now = new Date();
     const hour = now.getHours();
-    const isNight = hour < 6 || hour >= 19; // Night time between 7PM and 6AM
+    const isNight = hour < 6 || hour >= 20;
     
-    // Simplified mapping to fewer icon types for better performance
+    // Convert to Skycons icon type
     let iconType;
     
-    if (numericCode <= 1) {
+    if (code <= 1) {
+        // Clear sky
         iconType = isNight ? Skycons.CLEAR_NIGHT : Skycons.CLEAR_DAY;
-    } else if (numericCode === 2) {
+    } else if (code === 2) {
+        // Partly cloudy
         iconType = isNight ? Skycons.PARTLY_CLOUDY_NIGHT : Skycons.PARTLY_CLOUDY_DAY;
-    } else if (numericCode === 3) {
+    } else if (code === 3) {
+        // Cloudy/overcast
         iconType = Skycons.CLOUDY;
-    } else if (numericCode === 45 || numericCode === 48) {
+    } else if (code === 45 || code === 48) {
+        // Fog
         iconType = Skycons.FOG;
-    } else if ((numericCode >= 51 && numericCode <= 65) || (numericCode >= 80 && numericCode <= 82)) {
+    } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
+        // Rain (drizzle, rain, rain showers)
         iconType = Skycons.RAIN;
-    } else if ((numericCode >= 71 && numericCode <= 77) || (numericCode >= 85 && numericCode <= 86)) {
+    } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
+        // Snow (snow, snow grains, snow showers)
         iconType = Skycons.SNOW;
-    } else if (numericCode >= 95) {
-        iconType = Skycons.WIND; // Using WIND for thunderstorm as it's less complex to render
+    } else if (code >= 95) {
+        // Thunderstorm
+        iconType = Skycons.WIND;
     } else {
-        iconType = Skycons.CLOUDY; // Default to cloudy
+        // Default to cloudy for unknown codes
+        iconType = Skycons.CLOUDY;
     }
     
-    // Clear and set the icon
-    skycons.default.remove("current-icon");
-    skycons.default.add("current-icon", iconType);
+    // Remove any existing icon
+    skycons.default.remove('current-icon');
     
-    // Store the weather code
-    setCurrentWeatherCode(numericCode);
+    // Add the new icon
+    skycons.default.add('current-icon', iconType);
     
-    // Apply CSS-based atmosphere effect
-    setWeatherBackground(numericCode);
+    // Update the weather background
+    setWeatherBackground(code);
+    
+    // Return the icon type for reference
+    return iconType;
 }
 
 // Function to apply weather background using CSS classes
@@ -1110,13 +1282,22 @@ function displayStationWeather(station) {
 
     console.log("Station data:", station);
 
+    // Parse temperature value (handling comma decimals in EU format)
+    let temperature = station.t;
+    if (typeof temperature === 'string') {
+        // Replace comma with dot for decimal parsing
+        temperature = temperature.replace(',', '.');
+    }
+    // Convert to number and round
+    temperature = Math.round(parseFloat(temperature));
+
     // Location
     const locElem = document.querySelector('.location');
     if (locElem) locElem.textContent = cleanStationName(station.name);
 
     // Temperature
     const tempElem = document.querySelector('.temperature');
-    if (tempElem) tempElem.textContent = `${Math.round(station.t)}°C`;
+    if (tempElem) tempElem.textContent = `${temperature}°C`;
 
     // Determine weather condition and set weather icon
     let weatherInfo = "";
@@ -1130,8 +1311,14 @@ function displayStationWeather(station) {
         weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
     } else {
         // If no weather code, determine from station data
-        const temp = station.t;
-        const humidity = station.rh;
+        const temp = safeParseFloat(station.t);
+        
+        // Parse humidity, handling potential string values
+        let humidity = station.rh;
+        if (typeof humidity === 'string') {
+            humidity = humidity.replace(',', '.');
+        }
+        humidity = parseFloat(humidity);
         
         // Check if we have precipitation data
         const hasPrecipitation = station.precipitationSum !== undefined && station.precipitationSum > 0;
@@ -1186,15 +1373,37 @@ function displayStationWeather(station) {
 
     // Humidity
     const humidityElem = document.querySelector('.humidity');
-    if (humidityElem) humidityElem.textContent = station.rh ? `${TRANSLATIONS[currentLang].humidity}: ${Math.round(station.rh)}%` : '';
+    if (humidityElem) {
+        if (station.rh) {
+            let humidity = station.rh;
+            if (typeof humidity === 'string') {
+                humidity = humidity.replace(',', '.');
+            }
+            humidityElem.textContent = `${TRANSLATIONS[currentLang].humidity}: ${Math.round(parseFloat(humidity))}%`;
+        } else {
+            humidityElem.textContent = '';
+        }
+    }
 
     // Wind
     const windElem = document.querySelector('.wind');
     if (windElem) {
-        const windText = station.ff ? 
-            `${TRANSLATIONS[currentLang].wind}: ${Math.round(station.ff)} ${TRANSLATIONS[currentLang].kmh} ${station.dd || ''}` : 
-            '';
-        windElem.textContent = windText;
+        if (station.ff) {
+            let windSpeed = station.ff;
+            if (typeof windSpeed === 'string') {
+                windSpeed = windSpeed.replace(',', '.');
+            }
+            const windText = `${TRANSLATIONS[currentLang].wind}: ${Math.round(parseFloat(windSpeed))} ${TRANSLATIONS[currentLang].kmh} ${station.dd || ''}`;
+            windElem.textContent = windText;
+        } else {
+            windElem.textContent = '';
+        }
+    }
+
+    // Remove any existing altitude element
+    const existingAltitudeElem = document.querySelector('.altitude');
+    if (existingAltitudeElem && existingAltitudeElem.parentNode) {
+        existingAltitudeElem.parentNode.removeChild(existingAltitudeElem);
     }
 
     // Summary/description
