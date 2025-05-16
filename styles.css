@@ -923,6 +923,20 @@ body {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     -webkit-transform: translate3d(0,0,0);
+    
+    /* Improved transitions for video loops */
+    transition: opacity 1.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Special styles for video reversing */
+.weather-video.reversing {
+    /* Subtle effect for reverse playback to make it smoother */
+    filter: brightness(0.98);
+}
+
+/* Video smooth transitions between frames during seeking */
+.weather-video.seeking {
+    filter: brightness(0.9);
 }
 
 /* Video background visibility classes for each weather condition - optimized rendering */
