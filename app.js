@@ -698,8 +698,8 @@ async function fetchWeatherData() {
                 skycons.default.remove(iconId);
             }
             
-            // Limit to 3 days (0, 1, 2) for better performance on low-end devices
-            const maxDays = devicePerformanceScore < 3 ? 3 : 6;
+            // Always show 6 days of forecasts, regardless of device performance
+            const maxDays = 6;
             
             for (let i = 0; i < Math.min(maxDays, forecastData.forecasts.length); i++) {
                 const day = forecastData.forecasts[i];
@@ -1040,26 +1040,6 @@ function setWeatherBackground(code) {
         const effectDiv = document.createElement('div');
         effectDiv.className = `weather-effect ${weatherEffect}`;
         document.body.appendChild(effectDiv);
-    }
-    
-    // For very low-end devices, just add a performance indicator
-    if (devicePerformanceScore <= 2) {
-        let performanceIndicator = document.getElementById('performance-indicator');
-        if (!performanceIndicator) {
-            performanceIndicator = document.createElement('div');
-            performanceIndicator.id = 'performance-indicator';
-            performanceIndicator.style.position = 'fixed';
-            performanceIndicator.style.bottom = '10px';
-            performanceIndicator.style.right = '10px';
-            performanceIndicator.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            performanceIndicator.style.color = 'white';
-            performanceIndicator.style.padding = '5px';
-            performanceIndicator.style.borderRadius = '3px';
-            performanceIndicator.style.fontSize = '10px';
-            performanceIndicator.style.zIndex = '1000';
-            performanceIndicator.textContent = 'Low performance mode';
-            document.body.appendChild(performanceIndicator);
-        }
     }
     
     // Trigger cloud decorations update if available
