@@ -1,5 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap");
 
+/*
+ * Weather App Styles
+ * 
+ * This stylesheet uses TV-friendly approaches for transparency effects:
+ * - Avoids backdrop-filter which causes black backgrounds on many TVs
+ * - Uses semi-transparent background colors instead of blur effects
+ * - Provides better compatibility with TV browsers and WebOS
+ */
+
 /* Modern CSS Reset */
 * {
   margin: 0;
@@ -16,7 +25,8 @@
   --background-light: #1e56a0; /* Medium blue */
   --card-background: rgba(20, 30, 50, 0.7); /* Darker, more opaque */
   --border-color: rgba(255, 255, 255, 0.25);
-  --glass-effect: blur(12px);
+  --glass-effect: blur(12px); /* Kept for non-TV browsers */
+  --tv-glass-background: rgba(20, 30, 50, 0.65); /* TV-friendly glass background */
   --shadow-color: rgba(0, 0, 0, 0.5); /* Stronger shadow */
   
   /* Weather atmosphere colors */
@@ -71,7 +81,7 @@ body {
 }
 
 .lang-btn {
-  background: var(--card-background);
+  background: var(--tv-glass-background);
   border: 1px solid var(--border-color);
   color: var(--text-color);
   padding: 6px 12px;
@@ -79,7 +89,6 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  backdrop-filter: var(--glass-effect);
   font-size: 0.8rem;
 }
 
@@ -96,8 +105,7 @@ body {
 }
 
 .weather-container {
-  background: var(--card-background);
-  backdrop-filter: var(--glass-effect);
+  background: var(--tv-glass-background);
   border-radius: 24px;
   padding: 2.5rem;
   width: 100%;
@@ -122,12 +130,11 @@ body {
   color: var(--text-color);
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: rgba(30, 40, 70, 0.6);
+  background: var(--tv-glass-background);
   padding: 0.5rem 1.2rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  backdrop-filter: var(--glass-effect);
   border: 1px solid var(--border-color);
 }
 
@@ -197,7 +204,7 @@ body {
   color: var(--text-color);
   opacity: 0.9;
   letter-spacing: 0.5px;
-  background: rgba(30, 40, 70, 0.4);
+  background: var(--tv-glass-background);
   padding: 0.8rem 1.5rem;
   border-radius: 12px;
   display: inline-block;
@@ -248,7 +255,7 @@ body {
   font-size: 1rem; /* Reduced from 2rem */
   font-weight: 500;
   color: var(--text-color);
-  background: rgba(30, 40, 70, 0.5);
+  background: var(--tv-glass-background);
   padding: 0.8rem 1.5rem;
   border-radius: 12px;
   width: fit-content;
@@ -275,14 +282,13 @@ body {
 .forecast-day {
   text-align: center;
   padding: 1.5rem;
-  background: rgba(30, 40, 70, 0.4);
+  background: var(--tv-glass-background);
   border-radius: 16px;
   min-width: 0;
   max-width: none;
   width: auto;
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
-  backdrop-filter: var(--glass-effect);
   margin: 0;
   box-sizing: border-box;
   flex: 1 1 0;
@@ -575,9 +581,8 @@ body {
   padding: 1rem;
   font-size: 1rem;
   color: var(--text-color);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tv-glass-background);
   border-radius: 12px;
-  backdrop-filter: var(--glass-effect);
 }
 
 .error {
@@ -585,9 +590,8 @@ body {
   text-align: center;
   padding: 1rem;
   font-size: 1rem;
-  background: rgba(255, 0, 0, 0.1);
+  background: rgba(255, 0, 0, 0.3);
   border-radius: 12px;
-  backdrop-filter: var(--glass-effect);
 }
 
 /* Remove animation for weather elements */
