@@ -22,27 +22,52 @@ const upload = multer({
 // Redis connection configuration
 let redisConfig = {
     retryStrategy: function(times) {
-        console.log('Redis retry attempt:', times);
-        return Math.min(times * 50, 2000);
+        const delay = Math.min(times * 50, 2000);
+        console.log(`Redis connection retry attempt ${times}, next attempt in ${delay}ms`);
+        return delay;
     },
-    maxRetriesPerRequest: 3
+    maxRetriesPerRequest: 3,
+    connectTimeout: 10000, // 10 seconds
+    enableReadyCheck: true,
+    reconnectOnError: function(err) {
+        console.error('Redis reconnect on error:', err);
+        const targetError = 'READONLY';
+        if (err.message.includes(targetError)) {
+            return true; // Reconnect when the error contains "READONLY"
+        }
+        return false;
+    },
+    // Add TLS configuration for secure connections
+    tls: {
+        rejectUnauthorized: false // Required for some Redis providers
+    }
 };
 
 // Parse Redis URL if it exists
+let redisUrl;
 if (process.env.REDIS_URL) {
     try {
-        const redisUrl = new URL(process.env.REDIS_URL);
+        redisUrl = new URL(process.env.REDIS_URL);
         redisConfig = {
             ...redisConfig,
             host: redisUrl.hostname,
             port: redisUrl.port,
             password: redisUrl.password,
-            tls: {}
+            db: redisUrl.pathname ? parseInt(redisUrl.pathname.slice(1)) : 0,
+            // Keep TLS configuration
+            tls: {
+                rejectUnauthorized: false
+            }
         };
-        console.log('Redis configuration loaded from URL');
+        console.log('Redis configuration loaded from URL:', {
+            host: redisUrl.hostname,
+            port: redisUrl.port,
+            db: redisConfig.db,
+            hasPassword: !!redisUrl.password
+        });
     } catch (error) {
         console.error('Error parsing Redis URL:', error);
-        throw new Error('Invalid Redis URL configuration');
+        throw new Error(`Invalid Redis URL configuration: ${error.message}`);
     }
 } else {
     console.warn('REDIS_URL not set. Using default Redis configuration.');
@@ -55,46 +80,109 @@ if (process.env.REDIS_URL) {
 
 // Initialize Redis client
 let redis;
-function getRedisClient() {
-    if (!redis) {
+let isConnecting = false;
+let connectionPromise = null;
+let lastError = null;
+
+async function getRedisClient() {
+    if (redis && redis.status === 'ready') {
+        return redis;
+    }
+
+    if (isConnecting) {
+        console.log('Redis connection in progress, waiting...');
+        return connectionPromise;
+    }
+
+    isConnecting = true;
+    lastError = null;
+    connectionPromise = new Promise((resolve, reject) => {
         try {
+            console.log('Creating new Redis client...');
             redis = new Redis(redisConfig);
+
             redis.on('error', (err) => {
                 console.error('Redis Client Error:', err);
-                // Reset redis client on error to allow reconnection
+                lastError = err;
+                isConnecting = false;
                 redis = null;
+                connectionPromise = null;
             });
-            redis.on('connect', () => console.log('Redis client connected'));
-            return redis;
+
+            redis.on('connect', () => {
+                console.log('Redis client connected successfully');
+                isConnecting = false;
+                lastError = null;
+                resolve(redis);
+            });
+
+            redis.on('ready', () => {
+                console.log('Redis client ready');
+            });
+
+            redis.on('close', () => {
+                console.log('Redis connection closed');
+                isConnecting = false;
+                redis = null;
+                connectionPromise = null;
+            });
+
+            // Set a timeout for the connection
+            setTimeout(() => {
+                if (isConnecting) {
+                    const error = new Error('Redis connection timeout');
+                    console.error('Redis connection timeout');
+                    isConnecting = false;
+                    redis = null;
+                    connectionPromise = null;
+                    lastError = error;
+                    reject(error);
+                }
+            }, redisConfig.connectTimeout);
+
         } catch (error) {
             console.error('Error creating Redis client:', error);
-            throw new Error('Failed to initialize Redis client');
+            isConnecting = false;
+            redis = null;
+            connectionPromise = null;
+            lastError = error;
+            reject(error);
         }
-    }
-    return redis;
+    });
+
+    return connectionPromise;
 }
 
 // Helper function to get ads from Redis
 async function getAds() {
+    let client;
     try {
-        const client = getRedisClient();
+        client = await getRedisClient();
         const ads = await client.get('ads');
-        return ads ? JSON.parse(ads) : [];
+        if (!ads) {
+            console.log('No ads found in Redis, returning empty array');
+            return [];
+        }
+        return JSON.parse(ads);
     } catch (error) {
         console.error('Error getting ads from Redis:', error);
-        throw new Error(`Failed to get ads: ${error.message}`);
+        throw new Error(`Failed to get ads: ${error.message || 'Unknown error'}`);
     }
 }
 
 // Helper function to save ads to Redis
 async function saveAds(ads) {
+    let client;
     try {
-        const client = getRedisClient();
-        await client.set('ads', JSON.stringify(ads));
+        client = await getRedisClient();
+        const result = await client.set('ads', JSON.stringify(ads));
+        if (result !== 'OK') {
+            throw new Error('Redis SET command failed');
+        }
         return true;
     } catch (error) {
         console.error('Error saving ads to Redis:', error);
-        throw new Error(`Failed to save ads: ${error.message}`);
+        throw new Error(`Failed to save ads: ${error.message || 'Unknown error'}`);
     }
 }
 
@@ -103,6 +191,7 @@ const uploadMiddleware = upload.single('image');
 
 module.exports = async (req, res) => {
     console.log('Request method:', req.method);
+    console.log('Request path:', req.url);
     console.log('Request headers:', req.headers);
 
     // Set CORS headers
@@ -121,6 +210,17 @@ module.exports = async (req, res) => {
     }
 
     try {
+        // Test Redis connection before processing request
+        try {
+            const client = await getRedisClient();
+            await client.ping();
+            console.log('Redis connection test successful');
+        } catch (error) {
+            console.error('Redis connection test failed:', error);
+            const errorMessage = lastError ? lastError.message : error.message;
+            throw new Error(`Redis connection failed: ${errorMessage}. Please check your Redis configuration and connection details.`);
+        }
+
         if (req.method === 'GET') {
             const ads = await getAds();
             res.json(ads);
@@ -216,7 +316,8 @@ module.exports = async (req, res) => {
         res.status(500).json({ 
             error: 'Internal server error',
             details: error.message,
-            code: error.code || 'SERVER_ERROR'
+            code: error.code || 'SERVER_ERROR',
+            redisError: lastError ? lastError.message : null
         });
     }
 }; 
