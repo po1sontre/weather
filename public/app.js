@@ -67,7 +67,8 @@ const TRANSLATIONS = {
         september: 'September',
         october: 'October',
         november: 'November',
-        december: 'December'
+        december: 'December',
+        forecastNote: 'Note: This forecast covers the entire district, not just'
     },
     de: {
         feelsLike: 'Gefühlt',
@@ -128,7 +129,8 @@ const TRANSLATIONS = {
         september: 'September',
         october: 'Oktober',
         november: 'November',
-        december: 'Dezember'
+        december: 'Dezember',
+        forecastNote: 'Hinweis: Diese Vorhersage gilt für den gesamten Bezirk, nicht nur für'
     },
     it: {
         feelsLike: 'Percepita',
@@ -189,7 +191,8 @@ const TRANSLATIONS = {
         september: 'Settembre',
         october: 'Ottobre',
         november: 'Novembre',
-        december: 'Dicembre'
+        december: 'Dicembre',
+        forecastNote: 'Nota: Questa previsione copre l\'intero distretto, non solo'
     }
 };
 
@@ -766,7 +769,17 @@ async function fetchWeatherData() {
                 districtInfo.className = 'district-info';
                 forecastElem.parentElement.insertBefore(districtInfo, forecastElem);
             }
-            districtInfo.textContent = `${TRANSLATIONS[currentLang].districtForecast}: ${districtName}`;
+            // Create a more stylish district info display
+            const cityName = document.querySelector('.location').textContent;
+            districtInfo.innerHTML = `
+                <div class="district-header">
+                    <span class="district-icon">🌍</span>
+                    <span class="district-title">${districtName}</span>
+                </div>
+                <div class="district-subtitle">
+                    ${cityName} • ${TRANSLATIONS[currentLang].districtForecast}
+                </div>
+            `;
             
             console.log(`Using district ID: ${districtId}, name: ${districtName}`);
         }
@@ -781,8 +794,8 @@ async function fetchWeatherData() {
                 skycons.default.remove(iconId);
             }
             
-            // Always show 6 days of forecasts, regardless of device performance
-            const maxDays = 6;
+            // Always show 4 days of forecasts, regardless of device performance
+            const maxDays = 4;
             
             // TV performance optimization: pause animation during updates
             const needsOptimization = devicePerformanceScore <= 3;
@@ -818,7 +831,7 @@ async function fetchWeatherData() {
                 if (useSimpleIcons) {
                     const staticIconClass = getForecastIconClass(code, desc);
                     dayDiv.innerHTML = `
-                        <div class="day-name">${dayName}<br><span class="forecast-date">${formattedDate}</span></div>
+                        <div class="day-name">${dayName}<span class="forecast-date">${formattedDate}</span></div>
                         <div class="forecast-icon static-icon">
                             <i class="${staticIconClass}"></i>
                         </div>
@@ -827,7 +840,7 @@ async function fetchWeatherData() {
                     `;
                 } else {
                     dayDiv.innerHTML = `
-                        <div class="day-name">${dayName}<br><span class="forecast-date">${formattedDate}</span></div>
+                        <div class="day-name">${dayName}<span class="forecast-date">${formattedDate}</span></div>
                         <div class="forecast-icon">
                             <canvas id="${iconId}" width="80" height="80"></canvas>
                         </div>
