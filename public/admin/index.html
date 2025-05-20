@@ -55,7 +55,7 @@
 
             // Check if already logged in
             if (sessionStorage.getItem('isAuthenticated')) {
-                window.location.href = 'dashboard.html';
+                window.location.href = '/admin/dashboard.html';
                 return;
             }
 
@@ -97,8 +97,8 @@
                         if (data.success) {
                             // Store authentication state
                             sessionStorage.setItem('isAuthenticated', 'true');
-                            // Redirect to dashboard
-                            window.location.href = 'dashboard.html';
+                            // Redirect to dashboard with correct path
+                            window.location.href = '/admin/dashboard.html';
                         } else {
                             showError(data.error || 'Login failed');
                         }
