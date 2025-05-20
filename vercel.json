@@ -16,6 +16,14 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/admin",
+      "dest": "/public/admin/dashboard.html"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/public/admin/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
