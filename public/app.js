@@ -2714,29 +2714,6 @@ async function forceReloadVideo(video) {
     return false;
 }
 
-// Modify setWeatherBackground to use visual debug
-async function setWeatherBackground(code) {
-    updateDebugOverlay(`Setting weather background for code: ${code}`);
-    
-    // ... rest of the existing setWeatherBackground code ...
-    
-    // When handling the active video:
-    if (activeVideo) {
-        updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
-        const success = await forceReloadVideo(activeVideo);
-        
-        if (!success) {
-            updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
-            useVideoBackground = false;
-            // ... rest of fallback code ...
-        }
-    } else {
-        updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
-        useVideoBackground = false;
-    }
-    
-    // ... rest of the existing code ...
-}
 
 // Add debug overlay initialization
 document.addEventListener('DOMContentLoaded', () => {
