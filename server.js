@@ -36,7 +36,7 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files
-app.use(express.static('public'));
+app.use(express.static(__dirname));
 app.use('/admin', express.static('admin'));
 
 // Multer configuration for memory storage
