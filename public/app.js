@@ -2433,7 +2433,7 @@ async function setWeatherBackground(code) {
         });
         
         // Remove cloud decorations when using video background
-        if (useVideoBackground) {
+        if (useVideoBackground && activeVideoId) {
             const cloudContainer = document.getElementById('cloud-decorations-container');
             if (cloudContainer) {
                 cloudContainer.innerHTML = '';
@@ -2444,16 +2444,20 @@ async function setWeatherBackground(code) {
             const activeVideo = document.getElementById(activeVideoId);
             if (activeVideo) {
                 updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
-                const success = await forceReloadVideo(activeVideo);
-                
-                if (!success) {
-                    updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
-                    useVideoBackground = false;
-                    // Ensure cloud container is visible for fallback
-                    const cloudContainer = document.getElementById('cloud-decorations-container');
-                    if (cloudContainer) {
-                        cloudContainer.style.display = '';
+                try {
+                    const success = await forceReloadVideo(activeVideo);
+                    if (!success) {
+                        updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
+                        useVideoBackground = false;
+                        // Ensure cloud container is visible for fallback
+                        const cloudContainer = document.getElementById('cloud-decorations-container');
+                        if (cloudContainer) {
+                            cloudContainer.style.display = '';
+                        }
                     }
+                } catch (error) {
+                    updateDebugOverlay(`Error loading video ${activeVideoId}: ${error.message}`, true);
+                    useVideoBackground = false;
                 }
             } else {
                 updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
