@@ -24,6 +24,10 @@
       "dest": "/public/admin/$1"
     },
     {
+      "src": "/gen",
+      "dest": "/public/gen.html"
+    },
+    {
       "handle": "filesystem"
     },
     {
