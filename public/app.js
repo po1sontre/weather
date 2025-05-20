@@ -2382,11 +2382,9 @@ async function setWeatherBackground(code) {
         existingEffect.remove();
     }
     
-    // Add appropriate weather class and effect
+    // Add appropriate weather class
     let weatherClass = '';
-    let weatherEffect = '';
-    let useVideoBackground = true; // Default to using video for all weather types
-    let activeVideoId = getVideoIdForWeatherCode(code);
+    const activeVideoId = getVideoIdForWeatherCode(code);
     
     // Set weather class and background color based on code
     if (code >= 0 && code <= 1) {
@@ -2400,20 +2398,15 @@ async function setWeatherBackground(code) {
         document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for cloudy
     } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
         weatherClass = 'weather-rainy';
-        weatherEffect = 'rain';
         document.body.style.backgroundColor = '#34495e'; // Darker blue for rain
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
-        weatherEffect = 'snow';
         document.body.style.backgroundColor = '#7f8c8d'; // Gray for snow
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
-        weatherEffect = 'fog';
         document.body.style.backgroundColor = '#95a5a6'; // Light gray for fog
-        useVideoBackground = false; // No video for foggy
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
-        weatherEffect = 'rain';
         document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for thunder
     } else {
         weatherClass = 'weather-clear';
@@ -2423,72 +2416,28 @@ async function setWeatherBackground(code) {
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Handle all video backgrounds
-    const allVideos = document.querySelectorAll('.weather-video');
-    if (allVideos.length > 0) {
-        // First hide all videos
-        allVideos.forEach(video => {
+    // Handle video background if we have a valid video ID
+    if (activeVideoId) {
+        // Hide all videos first
+        document.querySelectorAll('.weather-video').forEach(video => {
             video.style.display = 'none';
             video.pause();
         });
-        
-        // Remove cloud decorations when using video background
-        if (useVideoBackground && activeVideoId) {
-            const cloudContainer = document.getElementById('cloud-decorations-container');
-            if (cloudContainer) {
-                cloudContainer.innerHTML = '';
-                cloudContainer.style.display = 'none';
-            }
-            
-            // Handle the active video
-            const activeVideo = document.getElementById(activeVideoId);
-            if (activeVideo) {
-                updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
-                try {
-                    const success = await forceReloadVideo(activeVideo);
-                    if (!success) {
-                        updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
-                        useVideoBackground = false;
-                        // Ensure cloud container is visible for fallback
-                        const cloudContainer = document.getElementById('cloud-decorations-container');
-                        if (cloudContainer) {
-                            cloudContainer.style.display = '';
-                        }
-                    }
-                } catch (error) {
-                    updateDebugOverlay(`Error loading video ${activeVideoId}: ${error.message}`, true);
-                    useVideoBackground = false;
+
+        // Get and handle the active video
+        const videoElement = document.getElementById(activeVideoId);
+        if (videoElement) {
+            updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
+            try {
+                const success = await forceReloadVideo(videoElement);
+                if (!success) {
+                    updateDebugOverlay(`Failed to load video ${activeVideoId}`, true);
                 }
-            } else {
-                updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
-                useVideoBackground = false;
+            } catch (error) {
+                updateDebugOverlay(`Error loading video ${activeVideoId}: ${error.message}`, true);
             }
-        }
-        
-        // Handle non-video weather conditions or fallback
-        if (!useVideoBackground) {
-            // Re-show cloud container
-            const cloudContainer = document.getElementById('cloud-decorations-container');
-            if (cloudContainer) {
-                cloudContainer.style.display = '';
-            }
-            
-            // Add weather effect if needed
-            if (weatherEffect && devicePerformanceScore > 2) {
-                const effectDiv = document.createElement('div');
-                effectDiv.className = `weather-effect ${weatherEffect}`;
-                document.body.appendChild(effectDiv);
-            }
-            
-            // Trigger cloud decorations
-            if (window.cloudDecorations) {
-                setTimeout(() => {
-                    updateDebugOverlay('Generating cloud decorations');
-                    if (typeof window.cloudDecorations.generate === 'function') {
-                        window.cloudDecorations.generate();
-                    }
-                }, 100);
-            }
+        } else {
+            updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
         }
     }
 }
