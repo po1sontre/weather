@@ -1,51 +1,32 @@
 const { put, del, list } = require('@vercel/blob');
 const multer = require('multer');
 
-// Blob storage key for ads list
-const ADS_LIST_KEY = 'ads-list.json';
-
-// Helper function to get ads from blob storage
+// Helper function to get ads directly from blob storage
 async function getAds() {
     try {
-        // List all blobs to find our ads list
+        // List all blobs
         const { blobs } = await list({
-            prefix: ADS_LIST_KEY,
             token: process.env.BLOB_READ_WRITE_TOKEN
         });
 
-        if (blobs.length === 0) {
-            // If no ads list exists, create an empty one
-            await put(ADS_LIST_KEY, JSON.stringify([]), {
-                access: 'public',
-                token: process.env.BLOB_READ_WRITE_TOKEN
-            });
-            return [];
-        }
+        // Convert all image blobs to ads
+        const ads = blobs
+            .filter(blob => 
+                blob.contentType?.startsWith('image/') || 
+                blob.pathname.match(/\.(jpg|jpeg|png|gif)$/i)
+            )
+            .map(blob => ({
+                id: blob.pathname.split('/').pop().split('.')[0] || Date.now().toString(),
+                imageUrl: blob.url,
+                link: '#',
+                createdAt: blob.uploadedAt || new Date().toISOString()
+            }));
 
-        // Get the latest ads list
-        const response = await fetch(blobs[0].url);
-        if (!response.ok) {
-            throw new Error('Failed to fetch ads list');
-        }
-        return await response.json();
+        console.log('Found ads in blob storage:', ads.length);
+        return ads;
     } catch (error) {
         console.error('Error getting ads from blob storage:', error);
         return [];
-    }
-}
-
-// Helper function to save ads to blob storage
-async function saveAds(newAds) {
-    try {
-        // Upload the new ads list to blob storage
-        await put(ADS_LIST_KEY, JSON.stringify(newAds), {
-            access: 'public',
-            token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-        return true;
-    } catch (error) {
-        console.error('Error saving ads to blob storage:', error);
-        return false;
     }
 }
 
@@ -111,8 +92,8 @@ module.exports = async (req, res) => {
     try {
         if (req.method === 'GET') {
             console.log('Handling GET request for ads');
-            const currentAds = await getAds();
-            res.json(currentAds);
+            const ads = await getAds();
+            res.json(ads);
         } else if (req.method === 'POST') {
             console.log('Handling POST request for ad upload');
             
@@ -183,34 +164,14 @@ module.exports = async (req, res) => {
 
                     console.log('File uploaded to blob storage:', blob.url);
 
-                    const currentAds = await getAds();
-                    console.log('Current ads count:', currentAds.length);
-
                     const newAd = {
-                        id: Date.now().toString(),
+                        id: blob.pathname.split('/').pop().split('.')[0] || Date.now().toString(),
                         imageUrl: blob.url,
                         link: req.body.link || '#',
-                        createdAt: new Date().toISOString()
+                        createdAt: blob.uploadedAt || new Date().toISOString()
                     };
 
-                    currentAds.push(newAd);
-                    console.log('Saving new ad:', newAd.id);
-                    
-                    const saved = await saveAds(currentAds);
-                    
-                    if (!saved) {
-                        console.error('Failed to save ad data, attempting to delete blob');
-                        // If saving fails, try to delete the uploaded blob
-                        try {
-                            await del(blob.url);
-                            console.log('Deleted blob after failed save');
-                        } catch (deleteError) {
-                            console.error('Error deleting blob after failed save:', deleteError);
-                        }
-                        throw new Error('Failed to save ad data to blob storage');
-                    }
-
-                    console.log('Ad saved successfully:', newAd.id);
+                    console.log('Ad uploaded successfully:', newAd.id);
                     res.json(newAd);
                 } catch (error) {
                     console.error('Error processing upload:', {
@@ -238,34 +199,28 @@ module.exports = async (req, res) => {
             });
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
-            const currentAds = await getAds();
-            const adIndex = currentAds.findIndex(ad => ad.id === id);
+            const ads = await getAds();
+            const ad = ads.find(ad => ad.id === id);
             
-            if (adIndex === -1) {
+            if (!ad) {
                 return res.status(404).json({ error: 'Ad not found' });
             }
-
-            const ad = currentAds[adIndex];
             
             // Delete image from Vercel Blob
-            if (ad.imageUrl) {
-                try {
-                    await del(ad.imageUrl, {
-                        token: process.env.BLOB_READ_WRITE_TOKEN
-                    });
-                } catch (error) {
-                    console.error('Error deleting image:', error);
-                }
+            try {
+                await del(ad.imageUrl, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
+                console.log('Ad deleted successfully:', id);
+                res.json({ message: 'Ad deleted successfully' });
+            } catch (error) {
+                console.error('Error deleting image:', error);
+                res.status(500).json({ 
+                    error: 'Failed to delete ad',
+                    details: error.message,
+                    code: 'DELETE_ERROR'
+                });
             }
-
-            currentAds.splice(adIndex, 1);
-            const saved = await saveAds(currentAds);
-            
-            if (!saved) {
-                throw new Error('Failed to save ad data after deletion');
-            }
-
-            res.json({ message: 'Ad deleted successfully' });
         } else {
             console.log('Method not allowed:', req.method);
             res.status(405).json({ 
