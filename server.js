@@ -20,10 +20,12 @@ app.use('/components', express.static(path.join(__dirname, 'components')));
 
 // Import API routes
 const adsApi = require('./api/ads');
+const authApi = require('./api/auth');
 
 // API Routes
 app.use('/api/ads', adsApi);
 app.use('/api/upload-ad', adsApi);
+app.use('/api/auth', authApi);
 
 // Root route handler - serve index.html from public directory
 app.get('/', (req, res) => {
