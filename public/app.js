@@ -1759,9 +1759,79 @@ function getTizenTVModel() {
     return modelMatch ? modelMatch[0] : 'unknown';
 }
 
+// Function to preload video for TV
+async function preloadVideoForTV(video) {
+    return new Promise((resolve, reject) => {
+        console.log(`Starting aggressive preload for TV: ${video.id}`);
+        
+        // Set lowest possible quality for initial load
+        video.setAttribute('preload', 'auto');
+        video.playbackRate = 0.5;
+        
+        // Force video to load in memory
+        const source = video.querySelector('source');
+        if (source) {
+            const originalSrc = source.src.split('?')[0];
+            // Add cache-busting and quality parameters
+            source.src = `${originalSrc}?t=${Date.now()}&q=low&preload=true`;
+            
+            // Create a new video element for preloading
+            const preloadVideo = document.createElement('video');
+            preloadVideo.style.display = 'none';
+            preloadVideo.setAttribute('preload', 'auto');
+            preloadVideo.setAttribute('muted', 'true');
+            preloadVideo.src = source.src;
+            
+            // Add to DOM temporarily for better loading
+            document.body.appendChild(preloadVideo);
+            
+            // Start loading
+            preloadVideo.load();
+            
+            // Monitor loading progress
+            let loadAttempts = 0;
+            const maxAttempts = 3;
+            
+            const attemptLoad = () => {
+                loadAttempts++;
+                console.log(`Preload attempt ${loadAttempts} for ${video.id}`);
+                
+                // Try to load the video
+                preloadVideo.play().then(() => {
+                    console.log(`Preload successful for ${video.id}`);
+                    // Copy the loaded video data
+                    video.src = preloadVideo.src;
+                    video.load();
+                    // Clean up
+                    preloadVideo.remove();
+                    resolve();
+                }).catch(error => {
+                    console.warn(`Preload attempt ${loadAttempts} failed:`, error);
+                    if (loadAttempts < maxAttempts) {
+                        // Try again with a delay
+                        setTimeout(attemptLoad, 2000);
+                    } else {
+                        // Fallback to direct loading
+                        console.log(`Falling back to direct loading for ${video.id}`);
+                        video.src = originalSrc;
+                        video.load();
+                        preloadVideo.remove();
+                        resolve();
+                    }
+                });
+            };
+            
+            // Start first attempt
+            attemptLoad();
+        } else {
+            reject(new Error('No source element found'));
+        }
+    });
+}
+
 // Enhanced video initialization for TV compatibility
-function initializeVideos() {
-    console.log('Initializing videos for TV compatibility');
+async function initializeVideos() {
+    console.log('Initializing videos with TV priority');
     
     // Get all videos
     const videos = document.querySelectorAll('.weather-video');
@@ -1772,18 +1842,18 @@ function initializeVideos() {
     console.log(`TV Model: ${tvModel}`);
     
     if (isTV) {
-        console.log('Tizen TV detected - applying enhanced video handling');
+        console.log('Tizen TV detected - applying TV-first video handling');
         
-        // Initialize video retry counter in sessionStorage
+        // Initialize video retry counter
         if (!sessionStorage.getItem('video_retry_count')) {
             sessionStorage.setItem('video_retry_count', '0');
         }
         
-        // Function to force reload a video with Tizen-specific optimizations
-        const forceReloadVideo = (video) => {
-            console.log(`Force reloading video for Tizen TV: ${video.id}`);
+        // Function to force reload a video with TV-first approach
+        const forceReloadVideo = async (video) => {
+            console.log(`Force reloading video for TV: ${video.id}`);
             
-            // Tizen-specific video attributes
+            // TV-specific video attributes
             video.setAttribute('x-webkit-airplay', 'allow');
             video.setAttribute('webkit-playsinline', 'true');
             video.setAttribute('playsinline', 'true');
@@ -1792,165 +1862,184 @@ function initializeVideos() {
             video.setAttribute('loop', 'true');
             video.setAttribute('preload', 'auto');
             
-            // Reduce video quality for better performance
-            video.playbackRate = 0.5;
-            
-            const source = video.querySelector('source');
-            if (source) {
-                // Add timestamp and quality parameter to force reload
-                const currentSrc = source.src.split('?')[0];
-                const timestamp = new Date().getTime();
-                source.src = `${currentSrc}?t=${timestamp}&q=low`;
-                
-                // Force video reload
-                video.load();
-                
-                // Reset video state
-                video.currentTime = 0;
-                video.style.display = 'block';
-                
-                // Tizen-specific play attempt with multiple fallbacks
-                const playWithTizenFallback = (retryCount = 0) => {
-                    if (retryCount >= 5) {
-                        console.warn(`Max retries reached for ${video.id} on Tizen TV`);
-                        return;
-                    }
-                    
-                    // Try different play strategies
-                    const playStrategies = [
-                        // Strategy 1: Direct play
-                        () => video.play(),
-                        // Strategy 2: Play with user interaction simulation
-                        () => {
-                            const clickEvent = new MouseEvent('click', {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            });
-                            document.body.dispatchEvent(clickEvent);
-                            return video.play();
-                        },
-                        // Strategy 3: Play with timeout
-                        () => new Promise(resolve => {
-                            setTimeout(() => resolve(video.play()), 1000);
-                        }),
-                        // Strategy 4: Play with visibility change
-                        () => {
-                            document.body.style.visibility = 'hidden';
-                            setTimeout(() => {
-                                document.body.style.visibility = 'visible';
-                                return video.play();
-                            }, 100);
-                        },
-                        // Strategy 5: Play with focus
-                        () => {
-                            window.focus();
-                            return video.play();
-                        }
-                    ];
-                    
-                    // Try current strategy
-                    const currentStrategy = playStrategies[retryCount % playStrategies.length];
-                    currentStrategy().catch(error => {
-                        console.warn(`Play attempt ${retryCount + 1} failed for ${video.id}:`, error);
-                        setTimeout(() => playWithTizenFallback(retryCount + 1), 2000);
-                    });
-                };
-                
-                // Start play attempts
-                playWithTizenFallback();
+            // Try aggressive preloading first
+            try {
+                await preloadVideoForTV(video);
+            } catch (e) {
+                console.warn(`Preload failed for ${video.id}, falling back to direct load:`, e);
             }
+            
+            // Reset video state
+            video.currentTime = 0;
+            video.style.display = 'block';
+            
+            // TV-specific play attempt with multiple fallbacks
+            const playWithTVFallback = async (retryCount = 0) => {
+                if (retryCount >= 5) {
+                    console.warn(`Max retries reached for ${video.id} on TV`);
+                    return;
+                }
+                
+                // Try different play strategies in sequence
+                const strategies = [
+                    // Strategy 1: Direct play with timeout
+                    async () => {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        return video.play();
+                    },
+                    // Strategy 2: Play with visibility toggle
+                    async () => {
+                        document.body.style.visibility = 'hidden';
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        document.body.style.visibility = 'visible';
+                        return video.play();
+                    },
+                    // Strategy 3: Play with focus and click simulation
+                    async () => {
+                        window.focus();
+                        const clickEvent = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        document.body.dispatchEvent(clickEvent);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        return video.play();
+                    },
+                    // Strategy 4: Play with video reset
+                    async () => {
+                        video.style.display = 'none';
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        video.style.display = 'block';
+                        return video.play();
+                    },
+                    // Strategy 5: Play with full reload
+                    async () => {
+                        const source = video.querySelector('source');
+                        if (source) {
+                            const currentSrc = source.src.split('?')[0];
+                            source.src = `${currentSrc}?t=${Date.now()}&q=low&retry=${retryCount}`;
+                            video.load();
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        return video.play();
+                    }
+                ];
+                
+                // Try current strategy
+                const currentStrategy = strategies[retryCount % strategies.length];
+                try {
+                    await currentStrategy();
+                    console.log(`Play successful with strategy ${retryCount + 1} for ${video.id}`);
+                } catch (error) {
+                    console.warn(`Play attempt ${retryCount + 1} failed:`, error);
+                    // Wait longer between retries
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await playWithTVFallback(retryCount + 1);
+                }
+            };
+            
+            // Start play attempts
+            await playWithTVFallback();
         };
         
-        // Set up periodic video health check for Tizen
+        // Preload all videos for TV
+        console.log('Starting preload of all videos for TV');
+        const preloadPromises = Array.from(videos).map(video => preloadVideoForTV(video).catch(e => {
+            console.warn(`Preload failed for ${video.id}:`, e);
+        }));
+        
+        // Wait for all preloads to complete
+        await Promise.allSettled(preloadPromises);
+        console.log('All video preloads completed');
+        
+        // Set up more frequent health check for TV
         setInterval(() => {
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo) {
-                // Check if video is actually playing
                 if (activeVideo.paused || activeVideo.ended || activeVideo.error) {
-                    console.log('Video health check: video needs recovery on Tizen TV');
+                    console.log('Video health check: video needs recovery on TV');
                     forceReloadVideo(activeVideo);
                 }
                 
-                // Memory management for Tizen
+                // More aggressive memory management for TV
                 const currentTime = activeVideo.currentTime;
                 const duration = activeVideo.duration;
-                if (duration > 0 && currentTime > duration * 0.8) {
-                    console.log('Video near end on Tizen TV, preparing for loop');
+                if (duration > 0 && currentTime > duration * 0.7) {
+                    console.log('Video near end on TV, preparing for loop');
                     forceReloadVideo(activeVideo);
                 }
             }
-        }, 5000); // Check more frequently on Tizen
+        }, 3000); // Check every 3 seconds on TV
         
-        // Enhanced error recovery for Tizen
+        // Enhanced error recovery for TV
         videos.forEach(video => {
-            // Tizen-specific event handlers
-            video.addEventListener('error', (e) => {
-                console.error(`Error with video ${video.id} on Tizen TV:`, e);
+            // TV-specific event handlers
+            video.addEventListener('error', async (e) => {
+                console.error(`Error with video ${video.id} on TV:`, e);
                 const retryCount = parseInt(sessionStorage.getItem('video_retry_count')) || 0;
                 
                 if (retryCount < 5) {
                     sessionStorage.setItem('video_retry_count', (retryCount + 1).toString());
                     console.log(`Attempting recovery for ${video.id} (attempt ${retryCount + 1})`);
-                    setTimeout(() => forceReloadVideo(video), 2000);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await forceReloadVideo(video);
                 } else {
-                    console.error(`Max retries reached for ${video.id}, resetting counter`);
+                    console.error(`Max retries reached for ${video.id}, trying final recovery`);
                     sessionStorage.setItem('video_retry_count', '0');
-                    // Try one last time with a different approach
                     video.style.display = 'none';
-                    setTimeout(() => {
-                        video.style.display = 'block';
-                        forceReloadVideo(video);
-                    }, 5000);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    video.style.display = 'block';
+                    await forceReloadVideo(video);
                 }
             });
             
-            // Add Tizen-specific event handlers
+            // Add TV-specific event handlers
             video.addEventListener('loadeddata', () => {
-                console.log(`Video ${video.id} data loaded successfully on Tizen TV`);
+                console.log(`Video ${video.id} data loaded successfully on TV`);
                 sessionStorage.setItem('video_retry_count', '0');
             });
             
-            video.addEventListener('stalled', () => {
-                console.log(`Video ${video.id} stalled on Tizen TV, attempting recovery`);
-                forceReloadVideo(video);
+            video.addEventListener('stalled', async () => {
+                console.log(`Video ${video.id} stalled on TV, attempting recovery`);
+                await forceReloadVideo(video);
             });
             
-            // Handle Tizen-specific visibility changes
-            video.addEventListener('webkitvisibilitychange', () => {
+            // Handle TV-specific visibility changes
+            video.addEventListener('webkitvisibilitychange', async () => {
                 if (!document.webkitHidden) {
-                    console.log('Tizen TV visibility restored - checking videos');
-                    setTimeout(() => forceReloadVideo(video), 500);
+                    console.log('TV visibility restored - checking videos');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await forceReloadVideo(video);
                 }
             });
         });
         
-        // Add Tizen-specific visibility change handler
-        document.addEventListener('webkitvisibilitychange', () => {
+        // Add TV-specific visibility change handler
+        document.addEventListener('webkitvisibilitychange', async () => {
             if (!document.webkitHidden) {
-                console.log('Tizen TV page visibility restored - checking videos');
-                setTimeout(() => {
-                    const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-                    if (activeVideo) {
-                        forceReloadVideo(activeVideo);
-                    }
-                }, 500);
+                console.log('TV page visibility restored - checking videos');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+                if (activeVideo) {
+                    await forceReloadVideo(activeVideo);
+                }
             }
         });
         
-        // Add Tizen-specific focus handler
-        window.addEventListener('focus', () => {
-            console.log('Tizen TV page focused - checking videos');
+        // Add TV-specific focus handler
+        window.addEventListener('focus', async () => {
+            console.log('TV page focused - checking videos');
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo) {
-                forceReloadVideo(activeVideo);
+                await forceReloadVideo(activeVideo);
             }
         });
         
-        // Apply Tizen-specific optimizations
+        // Apply TV-specific optimizations
         document.body.classList.add('tizen-tv');
         
-        // Add Tizen-specific CSS
+        // Add TV-specific CSS
         const style = document.createElement('style');
         style.textContent = `
             .tizen-tv .weather-video {
@@ -1958,11 +2047,24 @@ function initializeVideos() {
                 backface-visibility: hidden;
                 perspective: 1000;
                 will-change: transform;
+                -webkit-transform: translateZ(0);
+                -webkit-backface-visibility: hidden;
+                -webkit-perspective: 1000;
             }
             .tizen-tv video {
                 object-fit: cover;
                 width: 100%;
                 height: 100%;
+                -webkit-object-fit: cover;
+            }
+            .tizen-tv .video-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                background: #000;
             }
         `;
         document.head.appendChild(style);
@@ -1973,7 +2075,7 @@ function initializeVideos() {
         // Set video attributes
         video.setAttribute('autoplay', '');
         video.setAttribute('loop', '');
-        video.setAttribute('preload', 'auto');
+        video.setAttribute('preload', isTV ? 'auto' : 'metadata');
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         video.setAttribute('x-webkit-airplay', 'allow');
@@ -1988,7 +2090,11 @@ function initializeVideos() {
         video.addEventListener('canplay', () => {
             console.log(`Video ${video.id} can play`);
             if (video.style.display === 'block') {
-                video.play().catch(e => console.warn(`Initial play failed for ${video.id}:`, e));
+                if (isTV) {
+                    forceReloadVideo(video).catch(e => console.warn(`TV play failed for ${video.id}:`, e));
+                } else {
+                    video.play().catch(e => console.warn(`Initial play failed for ${video.id}:`, e));
+                }
             }
         });
         
@@ -2001,11 +2107,11 @@ function initializeVideos() {
     });
     
     // Global click handler for video recovery
-    document.addEventListener('click', () => {
+    document.addEventListener('click', async () => {
         const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
         if (activeVideo) {
             if (isTV) {
-                forceReloadVideo(activeVideo);
+                await forceReloadVideo(activeVideo);
             } else {
                 activeVideo.play().catch(e => console.warn('Play after click failed:', e));
             }
