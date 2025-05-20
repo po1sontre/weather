@@ -10,16 +10,31 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Redis connection configuration
-const redisConfig = {
-    host: process.env.REDIS_URL.split('@')[1].split(':')[0],
-    port: parseInt(process.env.REDIS_URL.split(':').pop()),
-    password: process.env.REDIS_URL.split('@')[0].split('//')[1].split(':')[1],
-    tls: {},
+let redisConfig = {
     retryStrategy: function(times) {
         return Math.min(times * 50, 2000);
     },
     maxRetriesPerRequest: 3
 };
+
+// Parse Redis URL if it exists
+if (process.env.REDIS_URL) {
+    const redisUrl = new URL(process.env.REDIS_URL);
+    redisConfig = {
+        ...redisConfig,
+        host: redisUrl.hostname,
+        port: redisUrl.port,
+        password: redisUrl.password,
+        tls: {}
+    };
+} else {
+    console.warn('REDIS_URL not set. Using default Redis configuration.');
+    redisConfig = {
+        ...redisConfig,
+        host: 'localhost',
+        port: 6379
+    };
+}
 
 // Initialize Redis client
 let redis;
