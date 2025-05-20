@@ -1,18 +1,52 @@
-const { put, del } = require('@vercel/blob');
+const { put, del, list } = require('@vercel/blob');
 const multer = require('multer');
 
-// In-memory storage for ads (will reset on cold start, but that's okay for this use case)
-let ads = [];
+// Blob storage key for ads list
+const ADS_LIST_KEY = 'ads-list.json';
 
-// Helper function to get ads
+// Helper function to get ads from blob storage
 async function getAds() {
-    return ads;
+    try {
+        // List all blobs to find our ads list
+        const { blobs } = await list({
+            prefix: ADS_LIST_KEY,
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+
+        if (blobs.length === 0) {
+            // If no ads list exists, create an empty one
+            await put(ADS_LIST_KEY, JSON.stringify([]), {
+                access: 'public',
+                token: process.env.BLOB_READ_WRITE_TOKEN
+            });
+            return [];
+        }
+
+        // Get the latest ads list
+        const response = await fetch(blobs[0].url);
+        if (!response.ok) {
+            throw new Error('Failed to fetch ads list');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting ads from blob storage:', error);
+        return [];
+    }
 }
 
-// Helper function to save ads
+// Helper function to save ads to blob storage
 async function saveAds(newAds) {
-    ads = newAds;
-    return true;
+    try {
+        // Upload the new ads list to blob storage
+        await put(ADS_LIST_KEY, JSON.stringify(newAds), {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        return true;
+    } catch (error) {
+        console.error('Error saving ads to blob storage:', error);
+        return false;
+    }
 }
 
 // Configure multer with optimized settings
@@ -173,7 +207,7 @@ module.exports = async (req, res) => {
                         } catch (deleteError) {
                             console.error('Error deleting blob after failed save:', deleteError);
                         }
-                        throw new Error('Failed to save ad data');
+                        throw new Error('Failed to save ad data to blob storage');
                     }
 
                     console.log('Ad saved successfully:', newAd.id);
