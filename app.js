@@ -240,9 +240,11 @@ function updatePageTranslations() {
     // Update page title
     document.getElementById('page-title').textContent = TRANSLATIONS[currentLang].weatherApp;
     
-    // Update big ad banner with translation
+    // Only update ad banner if it's empty
     const bigAdBanner = document.getElementById('big-ad-banner');
-    if (bigAdBanner) bigAdBanner.textContent = TRANSLATIONS[currentLang].yourBigAdHere;
+    if (bigAdBanner && !bigAdBanner.innerHTML.trim()) {
+        bigAdBanner.textContent = TRANSLATIONS[currentLang].yourBigAdHere;
+    }
 }
 
 // Current language - will be updated by initializeLanguage()
@@ -800,6 +802,7 @@ async function fetchWeatherData() {
                 const day = forecastData.forecasts[i];
                 const date = new Date(day.date);
                 const dayName = date.toLocaleDateString(lang, { weekday: 'short' });
+                const formattedDate = date.toLocaleDateString(lang, { day: 'numeric', month: 'short' });
                 const code = day.symbol?.code;
                 const desc = day.symbol?.description || '';
                 const tempMax = day.temperatureMax;
@@ -815,7 +818,7 @@ async function fetchWeatherData() {
                 if (useSimpleIcons) {
                     const staticIconClass = getForecastIconClass(code, desc);
                     dayDiv.innerHTML = `
-                        <div class="day-name">${dayName}</div>
+                        <div class="day-name">${dayName}<br><span class="forecast-date">${formattedDate}</span></div>
                         <div class="forecast-icon static-icon">
                             <i class="${staticIconClass}"></i>
                         </div>
@@ -824,7 +827,7 @@ async function fetchWeatherData() {
                     `;
                 } else {
                     dayDiv.innerHTML = `
-                        <div class="day-name">${dayName}</div>
+                        <div class="day-name">${dayName}<br><span class="forecast-date">${formattedDate}</span></div>
                         <div class="forecast-icon">
                             <canvas id="${iconId}" width="80" height="80"></canvas>
                         </div>
@@ -1888,6 +1891,41 @@ function initializeVideos() {
     }
 }
 
+// Function to load and display ads
+async function loadAds() {
+    try {
+        const response = await fetch('/api/ads');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const ads = await response.json();
+        
+        if (ads && ads.length > 0) {
+            // Randomly select an ad to display
+            const randomAd = ads[Math.floor(Math.random() * ads.length)];
+            const adBanner = document.getElementById('big-ad-banner');
+            
+            if (adBanner) {
+                adBanner.innerHTML = `
+                    <div class="ad-content">
+                        ${randomAd.imageUrl ? `<a href="${randomAd.link || '#'}" target="_blank"><img src="${randomAd.imageUrl}" alt="Advertisement"></a>` : ''}
+                    </div>
+                `;
+                
+                // Show the ad banner
+                adBanner.style.display = 'block';
+                console.log('Ad banner displayed successfully');
+            } else {
+                console.error('Ad banner element not found');
+            }
+        } else {
+            console.log('No ads available to display');
+        }
+    } catch (error) {
+        console.error('Error loading ads:', error);
+    }
+}
+
 // Initialize the app with optimized settings
 document.addEventListener('DOMContentLoaded', () => {
     // Set extreme low performance for TV devices
@@ -1907,4 +1945,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update time initially and start interval
     updateCurrentTime();
     setInterval(updateCurrentTime, 60000);
+    
+    // Load ads
+    loadAds();
 });

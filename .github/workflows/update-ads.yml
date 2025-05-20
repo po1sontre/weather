@@ -1,0 +1,25 @@
+name: Update Ads
+
+on:
+  push:
+    paths:
+      - 'ads/ads.json'
+  schedule:
+    - cron: '0 */6 * * *'  # Run every 6 hours
+
+jobs:
+  update-ads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Commit and push if changes
+        run: |
+          git add ads/ads.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update ads [skip ci]" && git push) 
