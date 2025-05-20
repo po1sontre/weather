@@ -2,12 +2,15 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
-const { kv } = require('@vercel/kv');
+const Redis = require('ioredis');
 const { put, del } = require('@vercel/blob');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Initialize Redis client
+const redis = new Redis(process.env.REDIS_URL);
 
 // Middleware
 app.use(cors());
@@ -32,15 +35,26 @@ const upload = multer({
     }
 });
 
-// Helper function to get ads from KV
+// Helper function to get ads from Redis
 async function getAds() {
-    const ads = await kv.get('ads') || [];
-    return ads;
+    try {
+        const ads = await redis.get('ads');
+        return ads ? JSON.parse(ads) : [];
+    } catch (error) {
+        console.error('Error getting ads from Redis:', error);
+        return [];
+    }
 }
 
-// Helper function to save ads to KV
+// Helper function to save ads to Redis
 async function saveAds(ads) {
-    await kv.set('ads', ads);
+    try {
+        await redis.set('ads', JSON.stringify(ads));
+        return true;
+    } catch (error) {
+        console.error('Error saving ads to Redis:', error);
+        return false;
+    }
 }
 
 // API Routes
@@ -63,8 +77,13 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
         // Upload image to Vercel Blob
         const blob = await put(req.file.originalname, req.file.buffer, {
             access: 'public',
-            contentType: req.file.mimetype
+            contentType: req.file.mimetype,
+            token: process.env.BLOB_READ_WRITE_TOKEN
         });
+
+        if (!blob || !blob.url) {
+            throw new Error('Failed to upload image to blob storage');
+        }
 
         const ads = await getAds();
         const newAd = {
@@ -78,11 +97,25 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
         };
 
         ads.push(newAd);
-        await saveAds(ads);
+        const saved = await saveAds(ads);
+        
+        if (!saved) {
+            // If saving to Redis fails, try to delete the uploaded blob
+            try {
+                await del(blob.url);
+            } catch (deleteError) {
+                console.error('Error deleting blob after failed Redis save:', deleteError);
+            }
+            throw new Error('Failed to save ad data');
+        }
+
         res.json(newAd);
     } catch (error) {
         console.error('Error uploading ad:', error);
-        res.status(500).json({ error: 'Failed to upload ad' });
+        res.status(500).json({ 
+            error: 'Failed to upload ad',
+            details: error.message
+        });
     }
 });
 
@@ -100,18 +133,28 @@ app.delete('/api/delete-ad/:id', async (req, res) => {
         // Delete image from Vercel Blob
         if (ad.imageUrl) {
             try {
-                await del(ad.imageUrl);
+                await del(ad.imageUrl, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
             } catch (error) {
                 console.error('Error deleting image:', error);
             }
         }
 
         ads.splice(adIndex, 1);
-        await saveAds(ads);
+        const saved = await saveAds(ads);
+        
+        if (!saved) {
+            throw new Error('Failed to save ad data after deletion');
+        }
+
         res.json({ message: 'Ad deleted successfully' });
     } catch (error) {
         console.error('Error deleting ad:', error);
-        res.status(500).json({ error: 'Failed to delete ad' });
+        res.status(500).json({ 
+            error: 'Failed to delete ad',
+            details: error.message
+        });
     }
 });
 
@@ -129,7 +172,10 @@ app.get('/api/stats', async (req, res) => {
         res.json(stats);
     } catch (error) {
         console.error('Error fetching stats:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
+        res.status(500).json({ 
+            error: 'Failed to fetch stats',
+            details: error.message
+        });
     }
 });
 
