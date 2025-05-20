@@ -1746,6 +1746,19 @@ function isLunixoApp() {
            window.location.search.includes('lunixo');
 }
 
+// Function to detect Tizen TV
+function isTizenTV() {
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('tizen') || ua.includes('samsung') || ua.includes('webos');
+}
+
+// Function to get Tizen TV model
+function getTizenTVModel() {
+    const ua = navigator.userAgent;
+    const modelMatch = ua.match(/TIZEN[^)]+/i);
+    return modelMatch ? modelMatch[0] : 'unknown';
+}
+
 // Enhanced video initialization for TV compatibility
 function initializeVideos() {
     console.log('Initializing videos for TV compatibility');
@@ -1753,103 +1766,169 @@ function initializeVideos() {
     // Get all videos
     const videos = document.querySelectorAll('.weather-video');
     
-    // Special handling for TV devices
-    const isTV = isLunixoApp();
+    // Special handling for Tizen TVs
+    const isTV = isTizenTV();
+    const tvModel = getTizenTVModel();
+    console.log(`TV Model: ${tvModel}`);
+    
     if (isTV) {
-        console.log('TV device detected - applying enhanced video handling');
+        console.log('Tizen TV detected - applying enhanced video handling');
         
         // Initialize video retry counter in sessionStorage
         if (!sessionStorage.getItem('video_retry_count')) {
             sessionStorage.setItem('video_retry_count', '0');
         }
         
-        // Function to force reload a video
+        // Function to force reload a video with Tizen-specific optimizations
         const forceReloadVideo = (video) => {
-            console.log(`Force reloading video: ${video.id}`);
+            console.log(`Force reloading video for Tizen TV: ${video.id}`);
+            
+            // Tizen-specific video attributes
+            video.setAttribute('x-webkit-airplay', 'allow');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('muted', 'true');
+            video.setAttribute('autoplay', 'true');
+            video.setAttribute('loop', 'true');
+            video.setAttribute('preload', 'auto');
+            
+            // Reduce video quality for better performance
+            video.playbackRate = 0.5;
+            
             const source = video.querySelector('source');
             if (source) {
-                // Add timestamp to force reload
+                // Add timestamp and quality parameter to force reload
                 const currentSrc = source.src.split('?')[0];
-                source.src = `${currentSrc}?t=${new Date().getTime()}`;
+                const timestamp = new Date().getTime();
+                source.src = `${currentSrc}?t=${timestamp}&q=low`;
+                
+                // Force video reload
                 video.load();
-                video.playbackRate = 0.5;
                 
                 // Reset video state
                 video.currentTime = 0;
                 video.style.display = 'block';
                 
-                // Attempt to play with retry mechanism
-                const playWithRetry = (retryCount = 0) => {
-                    if (retryCount >= 3) {
-                        console.warn(`Max retries reached for ${video.id}`);
+                // Tizen-specific play attempt with multiple fallbacks
+                const playWithTizenFallback = (retryCount = 0) => {
+                    if (retryCount >= 5) {
+                        console.warn(`Max retries reached for ${video.id} on Tizen TV`);
                         return;
                     }
                     
-                    video.play().catch(e => {
-                        console.warn(`Play attempt ${retryCount + 1} failed for ${video.id}:`, e);
-                        setTimeout(() => playWithRetry(retryCount + 1), 1000);
+                    // Try different play strategies
+                    const playStrategies = [
+                        // Strategy 1: Direct play
+                        () => video.play(),
+                        // Strategy 2: Play with user interaction simulation
+                        () => {
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            document.body.dispatchEvent(clickEvent);
+                            return video.play();
+                        },
+                        // Strategy 3: Play with timeout
+                        () => new Promise(resolve => {
+                            setTimeout(() => resolve(video.play()), 1000);
+                        }),
+                        // Strategy 4: Play with visibility change
+                        () => {
+                            document.body.style.visibility = 'hidden';
+                            setTimeout(() => {
+                                document.body.style.visibility = 'visible';
+                                return video.play();
+                            }, 100);
+                        },
+                        // Strategy 5: Play with focus
+                        () => {
+                            window.focus();
+                            return video.play();
+                        }
+                    ];
+                    
+                    // Try current strategy
+                    const currentStrategy = playStrategies[retryCount % playStrategies.length];
+                    currentStrategy().catch(error => {
+                        console.warn(`Play attempt ${retryCount + 1} failed for ${video.id}:`, error);
+                        setTimeout(() => playWithTizenFallback(retryCount + 1), 2000);
                     });
                 };
                 
-                playWithRetry();
+                // Start play attempts
+                playWithTizenFallback();
             }
         };
         
-        // Set up periodic video health check
+        // Set up periodic video health check for Tizen
         setInterval(() => {
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo) {
                 // Check if video is actually playing
                 if (activeVideo.paused || activeVideo.ended || activeVideo.error) {
-                    console.log('Video health check: video needs recovery');
+                    console.log('Video health check: video needs recovery on Tizen TV');
                     forceReloadVideo(activeVideo);
                 }
                 
-                // Check if video has been playing for too long (memory leak prevention)
+                // Memory management for Tizen
                 const currentTime = activeVideo.currentTime;
                 const duration = activeVideo.duration;
-                if (duration > 0 && currentTime > duration * 0.9) {
-                    console.log('Video near end, preparing for loop');
-                    // Force reload before it ends to prevent stuttering
+                if (duration > 0 && currentTime > duration * 0.8) {
+                    console.log('Video near end on Tizen TV, preparing for loop');
                     forceReloadVideo(activeVideo);
                 }
             }
-        }, 10000); // Check every 10 seconds
+        }, 5000); // Check more frequently on Tizen
         
-        // Enhanced error recovery
+        // Enhanced error recovery for Tizen
         videos.forEach(video => {
+            // Tizen-specific event handlers
             video.addEventListener('error', (e) => {
-                console.error(`Error with video ${video.id}:`, e);
+                console.error(`Error with video ${video.id} on Tizen TV:`, e);
                 const retryCount = parseInt(sessionStorage.getItem('video_retry_count')) || 0;
                 
-                if (retryCount < 5) { // Max 5 retries
+                if (retryCount < 5) {
                     sessionStorage.setItem('video_retry_count', (retryCount + 1).toString());
                     console.log(`Attempting recovery for ${video.id} (attempt ${retryCount + 1})`);
-                    setTimeout(() => forceReloadVideo(video), 1000);
+                    setTimeout(() => forceReloadVideo(video), 2000);
                 } else {
                     console.error(`Max retries reached for ${video.id}, resetting counter`);
                     sessionStorage.setItem('video_retry_count', '0');
+                    // Try one last time with a different approach
+                    video.style.display = 'none';
+                    setTimeout(() => {
+                        video.style.display = 'block';
+                        forceReloadVideo(video);
+                    }, 5000);
                 }
             });
             
-            // Add loadeddata event handler
+            // Add Tizen-specific event handlers
             video.addEventListener('loadeddata', () => {
-                console.log(`Video ${video.id} data loaded successfully`);
-                // Reset retry counter on successful load
+                console.log(`Video ${video.id} data loaded successfully on Tizen TV`);
                 sessionStorage.setItem('video_retry_count', '0');
             });
             
-            // Add stalled event handler
             video.addEventListener('stalled', () => {
-                console.log(`Video ${video.id} stalled, attempting recovery`);
+                console.log(`Video ${video.id} stalled on Tizen TV, attempting recovery`);
                 forceReloadVideo(video);
+            });
+            
+            // Handle Tizen-specific visibility changes
+            video.addEventListener('webkitvisibilitychange', () => {
+                if (!document.webkitHidden) {
+                    console.log('Tizen TV visibility restored - checking videos');
+                    setTimeout(() => forceReloadVideo(video), 500);
+                }
             });
         });
         
-        // Add visibility change handler with enhanced recovery
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                console.log('Page visibility restored - checking videos');
+        // Add Tizen-specific visibility change handler
+        document.addEventListener('webkitvisibilitychange', () => {
+            if (!document.webkitHidden) {
+                console.log('Tizen TV page visibility restored - checking videos');
                 setTimeout(() => {
                     const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
                     if (activeVideo) {
@@ -1859,17 +1938,34 @@ function initializeVideos() {
             }
         });
         
-        // Add page focus handler
+        // Add Tizen-specific focus handler
         window.addEventListener('focus', () => {
-            console.log('Page focused - checking videos');
+            console.log('Tizen TV page focused - checking videos');
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo) {
                 forceReloadVideo(activeVideo);
             }
         });
         
-        // Apply TV-specific optimizations
-        document.body.classList.add('tv-device');
+        // Apply Tizen-specific optimizations
+        document.body.classList.add('tizen-tv');
+        
+        // Add Tizen-specific CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            .tizen-tv .weather-video {
+                transform: translateZ(0);
+                backface-visibility: hidden;
+                perspective: 1000;
+                will-change: transform;
+            }
+            .tizen-tv video {
+                object-fit: cover;
+                width: 100%;
+                height: 100%;
+            }
+        `;
+        document.head.appendChild(style);
     }
     
     // Common video setup for all devices
@@ -1879,6 +1975,8 @@ function initializeVideos() {
         video.setAttribute('loop', '');
         video.setAttribute('preload', 'auto');
         video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('x-webkit-airplay', 'allow');
         video.muted = true;
         video.playbackRate = 0.5;
         
