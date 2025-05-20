@@ -1,5 +1,21 @@
 const Redis = require('ioredis');
 const { put, del } = require('@vercel/blob');
+const multer = require('multer');
+
+// Configure multer for memory storage
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 3 * 1024 * 1024 // 3MB limit
+    },
+    fileFilter: function (req, file, cb) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            return cb(new Error('Invalid file type. Only JPEG, PNG and GIF are allowed.'));
+        }
+        cb(null, true);
+    }
+});
 
 // Redis connection configuration
 let redisConfig = {
@@ -62,6 +78,9 @@ async function saveAds(ads) {
     }
 }
 
+// Create a middleware function to handle multer
+const uploadMiddleware = upload.single('image');
+
 module.exports = async (req, res) => {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -83,48 +102,62 @@ module.exports = async (req, res) => {
             const ads = await getAds();
             res.json(ads);
         } else if (req.method === 'POST') {
-            const { image, link } = req.body;
-            
-            if (!image) {
-                return res.status(400).json({ error: 'No image provided' });
-            }
-
-            // Upload image to Vercel Blob
-            const blob = await put(image.name, image.data, {
-                access: 'public',
-                contentType: image.type,
-                token: process.env.BLOB_READ_WRITE_TOKEN
-            });
-
-            if (!blob || !blob.url) {
-                throw new Error('Failed to upload image to blob storage');
-            }
-
-            const ads = await getAds();
-            const newAd = {
-                id: Date.now().toString(),
-                imageUrl: blob.url,
-                link: link || '#',
-                createdAt: new Date().toISOString(),
-                status: 'active',
-                impressions: 0,
-                clicks: 0
-            };
-
-            ads.push(newAd);
-            const saved = await saveAds(ads);
-            
-            if (!saved) {
-                // If saving to Redis fails, try to delete the uploaded blob
-                try {
-                    await del(blob.url);
-                } catch (deleteError) {
-                    console.error('Error deleting blob after failed Redis save:', deleteError);
+            // Handle file upload using multer middleware
+            uploadMiddleware(req, res, async function(err) {
+                if (err) {
+                    console.error('Multer error:', err);
+                    return res.status(400).json({ error: err.message });
                 }
-                throw new Error('Failed to save ad data');
-            }
 
-            res.json(newAd);
+                if (!req.file) {
+                    return res.status(400).json({ error: 'No image file provided' });
+                }
+
+                try {
+                    // Upload image to Vercel Blob
+                    const blob = await put(req.file.originalname, req.file.buffer, {
+                        access: 'public',
+                        contentType: req.file.mimetype,
+                        token: process.env.BLOB_READ_WRITE_TOKEN
+                    });
+
+                    if (!blob || !blob.url) {
+                        throw new Error('Failed to upload image to blob storage');
+                    }
+
+                    const ads = await getAds();
+                    const newAd = {
+                        id: Date.now().toString(),
+                        imageUrl: blob.url,
+                        link: req.body.link || '#',
+                        createdAt: new Date().toISOString(),
+                        status: 'active',
+                        impressions: 0,
+                        clicks: 0
+                    };
+
+                    ads.push(newAd);
+                    const saved = await saveAds(ads);
+                    
+                    if (!saved) {
+                        // If saving to Redis fails, try to delete the uploaded blob
+                        try {
+                            await del(blob.url);
+                        } catch (deleteError) {
+                            console.error('Error deleting blob after failed Redis save:', deleteError);
+                        }
+                        throw new Error('Failed to save ad data');
+                    }
+
+                    res.json(newAd);
+                } catch (error) {
+                    console.error('Error processing upload:', error);
+                    res.status(500).json({ 
+                        error: 'Failed to process upload',
+                        details: error.message
+                    });
+                }
+            });
         } else {
             res.status(405).json({ error: 'Method not allowed' });
         }
