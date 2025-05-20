@@ -18,11 +18,17 @@ document.addEventListener('DOMContentLoaded', function() {
         logoutBtn.addEventListener('click', logout);
     }
     
-    // File upload preview
+    // File upload preview and click handling
     const adImage = document.getElementById('adImage');
-    if (adImage) {
+    const fileUpload = document.querySelector('.file-upload');
+    
+    if (fileUpload && adImage) {
+        // Add click handler to the file-upload div
+        fileUpload.addEventListener('click', () => {
+            adImage.click();
+        });
+        
         adImage.addEventListener('change', function(e) {
-            const fileUpload = document.querySelector('.file-upload');
             if (this.files && this.files[0]) {
                 const placeholder = document.querySelector('.file-upload-placeholder');
                 placeholder.innerHTML = `
@@ -43,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('errorMessage');
 
     // Load initial data
-    loadDashboardStats();
     loadCurrentAds();
 
     if (adForm) {
@@ -78,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showSuccess('Ad uploaded successfully');
                 adForm.reset();
                 loadCurrentAds();
-                loadDashboardStats();
             } catch (error) {
                 console.error('Upload error:', error);
                 showError('Failed to upload ad');
@@ -131,10 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <img src="${ad.imageUrl}" alt="Ad ${ad.id}">
                     <div class="ad-info">
                         <p class="ad-link">${ad.link}</p>
-                        <p class="ad-stats">
-                            <span>Impressions: ${ad.impressions || 0}</span>
-                            <span>Clicks: ${ad.clicks || 0}</span>
-                        </p>
                         <div class="ad-actions">
                             <button onclick="editAd('${ad.id}')" class="edit-btn">Edit</button>
                             <button onclick="deleteAd('${ad.id}')" class="delete-btn">Delete</button>
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteAd = async function(adId) {
         if (confirm('Are you sure you want to delete this ad? This action cannot be undone.')) {
             try {
-                const response = await fetch(`/api/delete-ad/${adId}`, {
+                const response = await fetch(`/api/ads?id=${adId}`, {
                     method: 'DELETE'
                 });
                 
@@ -205,46 +205,4 @@ document.addEventListener('DOMContentLoaded', function() {
     window.logout = logout;
     window.showSuccess = showSuccess;
     window.showError = showError;
-
-    async function loadDashboardStats() {
-        try {
-            const response = await fetch('/api/stats');
-            if (!response.ok) {
-                throw new Error('Failed to fetch stats');
-            }
-
-            const stats = await response.json();
-            
-            // Update stats display
-            document.getElementById('totalAds').textContent = stats.totalAds;
-            document.getElementById('activeAds').textContent = stats.activeAds;
-            document.getElementById('impressions').textContent = stats.totalImpressions;
-            document.getElementById('pendingAds').textContent = stats.pendingAds;
-
-            // Update change indicators
-            updateChangeIndicator('totalAdsChange', stats.totalAdsChange);
-            updateChangeIndicator('activeAdsChange', stats.activeAdsChange);
-            updateChangeIndicator('impressionsChange', stats.impressionsChange);
-            updateChangeIndicator('pendingAdsChange', stats.pendingAdsChange);
-        } catch (error) {
-            console.error('Error loading stats:', error);
-            showError('Failed to load statistics');
-        }
-    }
-
-    function updateChangeIndicator(elementId, change) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-
-        if (change > 0) {
-            element.textContent = `+${change}%`;
-            element.className = 'stat-change positive';
-        } else if (change < 0) {
-            element.textContent = `${change}%`;
-            element.className = 'stat-change negative';
-        } else {
-            element.textContent = '0%';
-            element.className = 'stat-change';
-        }
-    }
 });

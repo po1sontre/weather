@@ -1,204 +1,42 @@
-const Redis = require('ioredis');
+const fs = require('fs').promises;
+const path = require('path');
 const { put, del } = require('@vercel/blob');
 const multer = require('multer');
 
-// Redis connection configuration
-let redisConfig = {
-    retryStrategy: function(times) {
-        const delay = Math.min(times * 50, 1000); // Reduced max delay to 1 second
-        console.log(`Redis connection retry attempt ${times}, next attempt in ${delay}ms`);
-        return delay;
-    },
-    maxRetriesPerRequest: 2, // Reduced retries
-    connectTimeout: 5000, // Reduced timeout to 5 seconds
-    commandTimeout: 3000, // Added command timeout
-    enableReadyCheck: true,
-    reconnectOnError: function(err) {
-        console.error('Redis reconnect on error:', err);
-        const targetError = 'READONLY';
-        if (err.message.includes(targetError)) {
-            return true;
-        }
-        return false;
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-};
+// File path for storing ads metadata
+const ADS_FILE_PATH = path.join(process.cwd(), 'data', 'ads.json');
 
-// Parse Redis URL if it exists
-let redisUrl;
-if (process.env.REDIS_URL) {
+// Ensure data directory exists
+async function ensureDataDir() {
+    const dataDir = path.join(process.cwd(), 'data');
     try {
-        redisUrl = new URL(process.env.REDIS_URL);
-        redisConfig = {
-            ...redisConfig,
-            host: redisUrl.hostname,
-            port: redisUrl.port,
-            password: redisUrl.password,
-            db: redisUrl.pathname ? parseInt(redisUrl.pathname.slice(1)) : 0,
-            tls: {
-                rejectUnauthorized: false
-            }
-        };
-        console.log('Redis configuration loaded from URL:', {
-            host: redisUrl.hostname,
-            port: redisUrl.port,
-            db: redisConfig.db,
-            hasPassword: !!redisUrl.password
-        });
-    } catch (error) {
-        console.error('Error parsing Redis URL:', error);
-        throw new Error(`Invalid Redis URL configuration: ${error.message}`);
+        await fs.access(dataDir);
+    } catch {
+        await fs.mkdir(dataDir, { recursive: true });
     }
-} else {
-    console.warn('REDIS_URL not set. Using default Redis configuration.');
-    redisConfig = {
-        ...redisConfig,
-        host: 'localhost',
-        port: 6379
-    };
 }
 
-// Initialize Redis client with connection pooling
-let redisPool = [];
-const MAX_POOL_SIZE = 2;
-let isConnecting = false;
-let connectionPromise = null;
-let lastError = null;
-
-async function getRedisClient() {
-    // Try to get an existing ready connection from the pool
-    const readyClient = redisPool.find(client => client.status === 'ready');
-    if (readyClient) {
-        return readyClient;
-    }
-
-    // If we have less than MAX_POOL_SIZE connections, create a new one
-    if (redisPool.length < MAX_POOL_SIZE) {
-        if (isConnecting) {
-            console.log('Redis connection in progress, waiting...');
-            return connectionPromise;
-        }
-
-        isConnecting = true;
-        lastError = null;
-        connectionPromise = new Promise((resolve, reject) => {
-            try {
-                console.log('Creating new Redis client...');
-                const client = new Redis(redisConfig);
-
-                client.on('error', (err) => {
-                    console.error('Redis Client Error:', err);
-                    lastError = err;
-                    const index = redisPool.indexOf(client);
-                    if (index > -1) {
-                        redisPool.splice(index, 1);
-                    }
-                });
-
-                client.on('connect', () => {
-                    console.log('Redis client connected successfully');
-                    isConnecting = false;
-                    lastError = null;
-                    redisPool.push(client);
-                    resolve(client);
-                });
-
-                client.on('ready', () => {
-                    console.log('Redis client ready');
-                });
-
-                client.on('close', () => {
-                    console.log('Redis connection closed');
-                    const index = redisPool.indexOf(client);
-                    if (index > -1) {
-                        redisPool.splice(index, 1);
-                    }
-                });
-
-                // Set a timeout for the connection
-                setTimeout(() => {
-                    if (isConnecting) {
-                        const error = new Error('Redis connection timeout');
-                        console.error('Redis connection timeout');
-                        isConnecting = false;
-                        lastError = error;
-                        reject(error);
-                    }
-                }, redisConfig.connectTimeout);
-
-            } catch (error) {
-                console.error('Error creating Redis client:', error);
-                isConnecting = false;
-                lastError = error;
-                reject(error);
-            }
-        });
-
-        return connectionPromise;
-    }
-
-    // If we have MAX_POOL_SIZE connections but none are ready, wait for one to become ready
-    return new Promise((resolve, reject) => {
-        const checkInterval = setInterval(() => {
-            const readyClient = redisPool.find(client => client.status === 'ready');
-            if (readyClient) {
-                clearInterval(checkInterval);
-                resolve(readyClient);
-            }
-        }, 100);
-
-        // Set a timeout for waiting
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            reject(new Error('No available Redis connections'));
-        }, redisConfig.connectTimeout);
-    });
-}
-
-// Helper function to get ads from Redis with timeout
+// Helper function to get ads from JSON file
 async function getAds() {
-    let client;
     try {
-        client = await getRedisClient();
-        const ads = await Promise.race([
-            client.get('ads'),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Redis get timeout')), redisConfig.commandTimeout)
-            )
-        ]);
-        
-        if (!ads) {
-            console.log('No ads found in Redis, returning empty array');
-            return [];
-        }
-        return JSON.parse(ads);
+        await ensureDataDir();
+        const data = await fs.readFile(ADS_FILE_PATH, 'utf8').catch(() => '[]');
+        return JSON.parse(data);
     } catch (error) {
-        console.error('Error getting ads from Redis:', error);
-        throw new Error(`Failed to get ads: ${error.message || 'Unknown error'}`);
+        console.error('Error reading ads file:', error);
+        return [];
     }
 }
 
-// Helper function to save ads to Redis with timeout
+// Helper function to save ads to JSON file
 async function saveAds(ads) {
-    let client;
     try {
-        client = await getRedisClient();
-        const result = await Promise.race([
-            client.set('ads', JSON.stringify(ads)),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Redis set timeout')), redisConfig.commandTimeout)
-            )
-        ]);
-        
-        if (result !== 'OK') {
-            throw new Error('Redis SET command failed');
-        }
+        await ensureDataDir();
+        await fs.writeFile(ADS_FILE_PATH, JSON.stringify(ads, null, 2));
         return true;
     } catch (error) {
-        console.error('Error saving ads to Redis:', error);
-        throw new Error(`Failed to save ads: ${error.message || 'Unknown error'}`);
+        console.error('Error saving ads file:', error);
+        return false;
     }
 }
 
@@ -206,7 +44,7 @@ async function saveAds(ads) {
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 2 * 1024 * 1024, // Reduced to 2MB
+        fileSize: 2 * 1024 * 1024, // 2MB
         files: 1
     },
     fileFilter: function (req, file, cb) {
@@ -243,22 +81,6 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // Test Redis connection before processing request
-        try {
-            const client = await getRedisClient();
-            await Promise.race([
-                client.ping(),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Redis ping timeout')), redisConfig.commandTimeout)
-                )
-            ]);
-            console.log('Redis connection test successful');
-        } catch (error) {
-            console.error('Redis connection test failed:', error);
-            const errorMessage = lastError ? lastError.message : error.message;
-            throw new Error(`Redis connection failed: ${errorMessage}. Please check your Redis configuration and connection details.`);
-        }
-
         if (req.method === 'GET') {
             const ads = await getAds();
             res.json(ads);
@@ -294,17 +116,12 @@ module.exports = async (req, res) => {
                         throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
                     }
 
-                    // Upload image to Vercel Blob with timeout
-                    const blob = await Promise.race([
-                        put(req.file.originalname, req.file.buffer, {
-                            access: 'public',
-                            contentType: req.file.mimetype,
-                            token: process.env.BLOB_READ_WRITE_TOKEN
-                        }),
-                        new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error('Blob upload timeout')), 10000)
-                        )
-                    ]);
+                    // Upload image to Vercel Blob
+                    const blob = await put(req.file.originalname, req.file.buffer, {
+                        access: 'public',
+                        contentType: req.file.mimetype,
+                        token: process.env.BLOB_READ_WRITE_TOKEN
+                    });
 
                     if (!blob || !blob.url) {
                         throw new Error('Failed to upload image to blob storage');
@@ -317,29 +134,21 @@ module.exports = async (req, res) => {
                         id: Date.now().toString(),
                         imageUrl: blob.url,
                         link: req.body.link || '#',
-                        createdAt: new Date().toISOString(),
-                        status: 'active',
-                        impressions: 0,
-                        clicks: 0
+                        createdAt: new Date().toISOString()
                     };
 
                     ads.push(newAd);
                     const saved = await saveAds(ads);
                     
                     if (!saved) {
-                        // If saving to Redis fails, try to delete the uploaded blob
+                        // If saving fails, try to delete the uploaded blob
                         try {
-                            await Promise.race([
-                                del(blob.url),
-                                new Promise((_, reject) => 
-                                    setTimeout(() => reject(new Error('Blob delete timeout')), 5000)
-                                )
-                            ]);
-                            console.log('Deleted blob after failed Redis save');
+                            await del(blob.url);
+                            console.log('Deleted blob after failed save');
                         } catch (deleteError) {
-                            console.error('Error deleting blob after failed Redis save:', deleteError);
+                            console.error('Error deleting blob after failed save:', deleteError);
                         }
-                        throw new Error('Failed to save ad data to Redis');
+                        throw new Error('Failed to save ad data');
                     }
 
                     console.log('Ad saved successfully:', newAd.id);
@@ -353,6 +162,36 @@ module.exports = async (req, res) => {
                     });
                 }
             });
+        } else if (req.method === 'DELETE') {
+            const { id } = req.query;
+            const ads = await getAds();
+            const adIndex = ads.findIndex(ad => ad.id === id);
+            
+            if (adIndex === -1) {
+                return res.status(404).json({ error: 'Ad not found' });
+            }
+
+            const ad = ads[adIndex];
+            
+            // Delete image from Vercel Blob
+            if (ad.imageUrl) {
+                try {
+                    await del(ad.imageUrl, {
+                        token: process.env.BLOB_READ_WRITE_TOKEN
+                    });
+                } catch (error) {
+                    console.error('Error deleting image:', error);
+                }
+            }
+
+            ads.splice(adIndex, 1);
+            const saved = await saveAds(ads);
+            
+            if (!saved) {
+                throw new Error('Failed to save ad data after deletion');
+            }
+
+            res.json({ message: 'Ad deleted successfully' });
         } else {
             res.status(405).json({ 
                 error: 'Method not allowed',
@@ -364,8 +203,10 @@ module.exports = async (req, res) => {
         res.status(500).json({ 
             error: 'Internal server error',
             details: error.message,
-            code: error.code || 'SERVER_ERROR',
-            redisError: lastError ? lastError.message : null
+            code: error.code || 'SERVER_ERROR'
         });
     }
-}; 
+};
+
+// Export getAds function for other modules if needed
+module.exports.getAds = getAds; 
