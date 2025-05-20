@@ -2366,7 +2366,7 @@ async function setWeatherBackground(code) {
     
     // Add appropriate weather class
     let weatherClass = '';
-    const activeVideoId = getVideoIdForWeatherCode(code);
+    const videoId = getVideoIdForWeatherCode(code);
     
     // Set weather class and background color based on code
     if (code >= 0 && code <= 1) {
@@ -2399,7 +2399,7 @@ async function setWeatherBackground(code) {
     document.body.classList.add(weatherClass);
     
     // Handle video background if we have a valid video ID
-    if (activeVideoId) {
+    if (videoId) {
         // Hide all videos first
         document.querySelectorAll('.weather-video').forEach(video => {
             video.style.display = 'none';
@@ -2407,19 +2407,25 @@ async function setWeatherBackground(code) {
         });
 
         // Get and handle the active video
-        const videoElement = document.getElementById(activeVideoId);
+        const videoElement = document.getElementById(videoId);
         if (videoElement) {
-            updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
+            updateDebugOverlay(`Attempting to load video: ${videoId}`);
             try {
+                // Set the video source directly
+                const videoPath = `components/decorations/${videoId}.mp4`;
+                videoElement.src = `${videoPath}?t=${Date.now()}`; // Add cache busting
+                videoElement.load();
+                
+                // Try to play the video
                 const success = await forceReloadVideo(videoElement);
                 if (!success) {
-                    updateDebugOverlay(`Failed to load video ${activeVideoId}`, true);
+                    updateDebugOverlay(`Failed to load video ${videoId}`, true);
                 }
             } catch (error) {
-                updateDebugOverlay(`Error loading video ${activeVideoId}: ${error.message}`, true);
+                updateDebugOverlay(`Error loading video ${videoId}: ${error.message}`, true);
             }
         } else {
-            updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
+            updateDebugOverlay(`Video element ${videoId} not found`, true);
         }
     }
 }
