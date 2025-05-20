@@ -1759,32 +1759,49 @@ function getTizenTVModel() {
     return modelMatch ? modelMatch[0] : 'unknown';
 }
 
-// Function to preload video for TV
-async function preloadVideoForTV(video) {
-    return new Promise((resolve, reject) => {
-        console.log(`Starting aggressive preload for TV: ${video.id}`);
+// Function to get video ID for weather code
+function getVideoIdForWeatherCode(code) {
+    if (code >= 0 && code <= 1) return 'video-clearsky';
+    if (code === 2) return 'video-partly-cloudy';
+    if (code === 3) return 'video-cloudy';
+    if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) return 'video-rain';
+    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'video-snow';
+    if (code >= 95) return 'video-thunder';
+    return 'video-clearsky'; // default
+}
+
+// Function to preload a specific video for TV
+async function preloadVideoForTV(videoId) {
+    const video = document.getElementById(videoId);
+    if (!video) {
+        console.warn(`Video element ${videoId} not found`);
+        return;
+    }
+
+    console.log(`Starting preload for TV: ${videoId}`);
+    
+    // Set lowest possible quality for initial load
+    video.setAttribute('preload', 'auto');
+    video.playbackRate = 0.5;
+    
+    // Force video to load in memory
+    const source = video.querySelector('source');
+    if (source) {
+        const originalSrc = source.src.split('?')[0];
+        // Add cache-busting and quality parameters
+        source.src = `${originalSrc}?t=${Date.now()}&q=low&preload=true`;
         
-        // Set lowest possible quality for initial load
-        video.setAttribute('preload', 'auto');
-        video.playbackRate = 0.5;
+        // Create a new video element for preloading
+        const preloadVideo = document.createElement('video');
+        preloadVideo.style.display = 'none';
+        preloadVideo.setAttribute('preload', 'auto');
+        preloadVideo.setAttribute('muted', 'true');
+        preloadVideo.src = source.src;
         
-        // Force video to load in memory
-        const source = video.querySelector('source');
-        if (source) {
-            const originalSrc = source.src.split('?')[0];
-            // Add cache-busting and quality parameters
-            source.src = `${originalSrc}?t=${Date.now()}&q=low&preload=true`;
-            
-            // Create a new video element for preloading
-            const preloadVideo = document.createElement('video');
-            preloadVideo.style.display = 'none';
-            preloadVideo.setAttribute('preload', 'auto');
-            preloadVideo.setAttribute('muted', 'true');
-            preloadVideo.src = source.src;
-            
-            // Add to DOM temporarily for better loading
-            document.body.appendChild(preloadVideo);
-            
+        // Add to DOM temporarily for better loading
+        document.body.appendChild(preloadVideo);
+        
+        return new Promise((resolve, reject) => {
             // Start loading
             preloadVideo.load();
             
@@ -1794,11 +1811,11 @@ async function preloadVideoForTV(video) {
             
             const attemptLoad = () => {
                 loadAttempts++;
-                console.log(`Preload attempt ${loadAttempts} for ${video.id}`);
+                console.log(`Preload attempt ${loadAttempts} for ${videoId}`);
                 
                 // Try to load the video
                 preloadVideo.play().then(() => {
-                    console.log(`Preload successful for ${video.id}`);
+                    console.log(`Preload successful for ${videoId}`);
                     // Copy the loaded video data
                     video.src = preloadVideo.src;
                     video.load();
@@ -1812,7 +1829,7 @@ async function preloadVideoForTV(video) {
                         setTimeout(attemptLoad, 2000);
                     } else {
                         // Fallback to direct loading
-                        console.log(`Falling back to direct loading for ${video.id}`);
+                        console.log(`Falling back to direct loading for ${videoId}`);
                         video.src = originalSrc;
                         video.load();
                         preloadVideo.remove();
@@ -1823,8 +1840,29 @@ async function preloadVideoForTV(video) {
             
             // Start first attempt
             attemptLoad();
-        } else {
-            reject(new Error('No source element found'));
+        });
+    }
+    return Promise.reject(new Error('No source element found'));
+}
+
+// Function to unload unnecessary videos
+function unloadUnnecessaryVideos(currentVideoId) {
+    const allVideos = document.querySelectorAll('.weather-video');
+    allVideos.forEach(video => {
+        if (video.id !== currentVideoId) {
+            // Reset video state
+            video.style.display = 'none';
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+            
+            // Clear source
+            const source = video.querySelector('source');
+            if (source) {
+                source.removeAttribute('src');
+            }
+            
+            console.log(`Unloaded unnecessary video: ${video.id}`);
         }
     });
 }
@@ -1864,7 +1902,7 @@ async function initializeVideos() {
             
             // Try aggressive preloading first
             try {
-                await preloadVideoForTV(video);
+                await preloadVideoForTV(video.id);
             } catch (e) {
                 console.warn(`Preload failed for ${video.id}, falling back to direct load:`, e);
             }
@@ -1942,16 +1980,6 @@ async function initializeVideos() {
             // Start play attempts
             await playWithTVFallback();
         };
-        
-        // Preload all videos for TV
-        console.log('Starting preload of all videos for TV');
-        const preloadPromises = Array.from(videos).map(video => preloadVideoForTV(video).catch(e => {
-            console.warn(`Preload failed for ${video.id}:`, e);
-        }));
-        
-        // Wait for all preloads to complete
-        await Promise.allSettled(preloadPromises);
-        console.log('All video preloads completed');
         
         // Set up more frequent health check for TV
         setInterval(() => {
@@ -2097,13 +2125,6 @@ async function initializeVideos() {
                 }
             }
         });
-        
-        // Try to preload the video
-        try {
-            video.load();
-        } catch (e) {
-            console.warn(`Couldn't preload video ${video.id}:`, e);
-        }
     });
     
     // Global click handler for video recovery
@@ -2117,6 +2138,207 @@ async function initializeVideos() {
             }
         }
     });
+}
+
+// Modify setWeatherBackground to handle video loading
+async function setWeatherBackground(code) {
+    console.log(`Setting weather background for code: ${code}`);
+    
+    // Remove all weather classes
+    document.body.classList.remove(
+        'weather-clear',
+        'weather-partly-cloudy',
+        'weather-cloudy',
+        'weather-rainy',
+        'weather-snowy',
+        'weather-foggy',
+        'weather-thunder'
+    );
+    
+    // Remove night class if it's day time
+    const hour = new Date().getHours();
+    const isNight = hour < 6 || hour >= 19;
+    document.body.classList.toggle('night', isNight);
+    
+    // Remove any existing weather effects
+    const existingEffect = document.querySelector('.weather-effect');
+    if (existingEffect) {
+        existingEffect.remove();
+    }
+    
+    // Add appropriate weather class and effect
+    let weatherClass = '';
+    let weatherEffect = '';
+    let useVideoBackground = true; // Default to using video for all weather types
+    let activeVideoId = getVideoIdForWeatherCode(code);
+    
+    if (code >= 0 && code <= 1) {
+        weatherClass = 'weather-clear';
+    } else if (code === 2) {
+        weatherClass = 'weather-partly-cloudy';
+    } else if (code === 3) {
+        weatherClass = 'weather-cloudy';
+    } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
+        weatherClass = 'weather-rainy';
+        weatherEffect = 'rain';
+    } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
+        weatherClass = 'weather-snowy';
+        weatherEffect = 'snow';
+    } else if (code === 45 || code === 48) {
+        weatherClass = 'weather-foggy';
+        weatherEffect = 'fog';
+        useVideoBackground = false; // No video for foggy
+    } else if (code >= 95) {
+        weatherClass = 'weather-thunder';
+        weatherEffect = 'rain';
+    } else {
+        weatherClass = 'weather-clear';
+    }
+    
+    // Add the weather class
+    document.body.classList.add(weatherClass);
+    
+    // Handle all video backgrounds for better TV compatibility
+    const allVideos = document.querySelectorAll('.weather-video');
+    if (allVideos.length > 0) {
+        // First hide all videos
+        allVideos.forEach(video => {
+            video.style.display = 'none';
+        });
+        
+        // Remove cloud decorations when using video background
+        if (useVideoBackground) {
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.innerHTML = '';
+                cloudContainer.style.display = 'none';
+            }
+            
+            // Unload unnecessary videos
+            unloadUnnecessaryVideos(activeVideoId);
+            
+            // Handle the active video with enhanced TV support
+            const activeVideo = document.getElementById(activeVideoId);
+            if (activeVideo) {
+                // Make the active video visible
+                activeVideo.style.display = 'block';
+                
+                // For videos that have day/night sections
+                if (activeVideoId === 'video-snow' || activeVideoId === 'video-thunder') {
+                    const setupVideo = async () => {
+                        const duration = activeVideo.duration;
+                        if (isNight) {
+                            activeVideo.currentTime = (duration / 2) + (duration / 6);
+                        } else {
+                            activeVideo.currentTime = duration / 6;
+                        }
+                        
+                        // Enhanced play attempt with retry
+                        if (isTizenTV()) {
+                            await forceReloadVideo(activeVideo);
+                        } else {
+                            const playWithRetry = async (retryCount = 0) => {
+                                if (retryCount >= 3) return;
+                                
+                                try {
+                                    await activeVideo.play();
+                                } catch (error) {
+                                    console.warn(`Play attempt ${retryCount + 1} failed:`, error);
+                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                    await playWithRetry(retryCount + 1);
+                                }
+                            };
+                            
+                            await playWithRetry();
+                        }
+                    };
+                    
+                    if (activeVideo.readyState >= 1) {
+                        await setupVideo();
+                    } else {
+                        activeVideo.addEventListener('loadedmetadata', setupVideo, { once: true });
+                    }
+                } else {
+                    // For standard videos
+                    if (isTizenTV()) {
+                        await forceReloadVideo(activeVideo);
+                    } else {
+                        const playWithRetry = async (retryCount = 0) => {
+                            if (retryCount >= 3) return;
+                            
+                            try {
+                                await activeVideo.play();
+                            } catch (error) {
+                                console.warn(`Play attempt ${retryCount + 1} failed:`, error);
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                await playWithRetry(retryCount + 1);
+                            }
+                        };
+                        
+                        await playWithRetry();
+                    }
+                }
+            }
+        } else {
+            // Re-show cloud container for non-video weather conditions
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.style.display = ''; // Reset to default display
+            }
+            
+            // Add weather effect if needed and not using video background
+            if (weatherEffect && devicePerformanceScore > 2) {
+                const effectDiv = document.createElement('div');
+                effectDiv.className = `weather-effect ${weatherEffect}`;
+                document.body.appendChild(effectDiv);
+            }
+            
+            // Trigger cloud decorations update if available
+            if (window.cloudDecorations) {
+                // Wait a short moment for the weather class to apply
+                setTimeout(() => {
+                    console.log('Triggering cloud decorations generation');
+                    
+                    // First check if the cloud container exists
+                    let container = document.getElementById('cloud-decorations-container');
+                    if (!container) {
+                        console.log('Cloud container not found, creating it');
+                        container = document.createElement('div');
+                        container.id = 'cloud-decorations-container';
+                        container.style.position = 'fixed';
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.width = '100%';
+                        container.style.height = '100%';
+                        container.style.zIndex = '-1';
+                        container.style.pointerEvents = 'none';
+                        document.body.appendChild(container);
+                    }
+                    
+                    // If clouds.js script is not loaded yet, dynamically add it
+                    if (!window.cloudDecorations.generate) {
+                        console.log('Cloud decorations not fully loaded, loading script');
+                        const script = document.createElement('script');
+                        script.src = 'components/decorations/clouds.js';
+                        script.onload = function() {
+                            console.log('Cloud decorations script loaded, initializing');
+                            if (window.cloudDecorations && window.cloudDecorations.init) {
+                                window.cloudDecorations.init();
+                            }
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        // Clouds script is loaded, generate clouds
+                        if (typeof window.cloudDecorations.generate === 'function') {
+                            window.cloudDecorations.generate();
+                        } else {
+                            console.error('Cloud decorations generate function not available');
+                        }
+                    }
+                }, 100);
+            }
+        }
+    }
 }
 
 // Function to load and display ads
