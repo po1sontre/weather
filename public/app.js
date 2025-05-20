@@ -1968,7 +1968,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Rest of initialization code...
 });
 
-// Modify initializeVideos to add better performance optimizations
+// Modify initializeVideos to add performance optimizations
 function initializeVideos() {
     console.log('Initializing videos with performance optimizations');
     
@@ -1979,8 +1979,8 @@ function initializeVideos() {
         video.muted = true;
         video.loop = true;
         video.playsInline = true;
-        video.preload = 'metadata';
-        video.playbackRate = 0.75;
+        video.preload = 'metadata'; // Only load metadata initially
+        video.playbackRate = 0.75; // Slightly slower playback for smoother performance
         
         // Hardware acceleration hints
         video.style.transform = 'translateZ(0)';
@@ -1990,35 +1990,6 @@ function initializeVideos() {
         // Hide initially
         video.style.display = 'none';
         
-        // Add smooth looping handler
-        video.addEventListener('timeupdate', () => {
-            // When video is near the end (last 0.5 seconds), prepare for smooth loop
-            if (video.duration - video.currentTime < 0.5) {
-                // For weak devices, reduce quality during transition
-                if (devicePerformanceScore <= 2) {
-                    video.playbackRate = 0.5;
-                }
-            } else if (video.playbackRate !== 0.75) {
-                // Reset playback rate after transition
-                video.playbackRate = 0.75;
-            }
-        });
-
-        // Handle loop event for smoother transition
-        video.addEventListener('ended', () => {
-            if (devicePerformanceScore <= 2) {
-                // For weak devices, use a small delay before restarting
-                setTimeout(() => {
-                    video.currentTime = 0;
-                    video.play().catch(console.error);
-                }, 50);
-            } else {
-                // For better devices, restart immediately
-                video.currentTime = 0;
-                video.play().catch(console.error);
-            }
-        });
-
         // Add error handling
         video.addEventListener('error', (e) => {
             console.error(`Error with video ${video.id}:`, e);
@@ -2026,7 +1997,73 @@ function initializeVideos() {
     });
 }
 
-// Modify forceReloadVideo for smoother playback and better looping
+// Modify ensureVideoSource for better performance
+async function ensureVideoSource(video, videoId) {
+    const source = video.querySelector('source');
+    if (!source) {
+        console.log(`No source element found for ${videoId}`);
+        return false;
+    }
+
+    // Get the base video path
+    const basePath = `components/decorations/${videoId}.mp4`;
+    
+    // Set performance-focused attributes
+    video.setAttribute('preload', 'metadata');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.muted = true;
+    video.playbackRate = 0.75;
+    
+    // Set source with cache busting
+    source.src = `${basePath}?t=${Date.now()}`;
+    
+    return new Promise((resolve) => {
+        let loadTimeout;
+        let hasStartedLoading = false;
+        
+        const cleanup = () => {
+            clearTimeout(loadTimeout);
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+        };
+        
+        const handleLoadedMetadata = () => {
+            // Start loading the video data after metadata is loaded
+            video.load();
+        };
+        
+        const handleCanPlay = () => {
+            cleanup();
+            resolve(true);
+        };
+        
+        const handleError = (e) => {
+            console.error(`Error loading ${videoId}:`, e.target.error?.message || 'Unknown error');
+            cleanup();
+            resolve(false);
+        };
+        
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('error', handleError);
+        
+        // Load metadata first
+        video.load();
+        
+        // Timeout for metadata loading
+        loadTimeout = setTimeout(() => {
+            if (!hasStartedLoading) {
+                console.log(`Timeout loading metadata for ${videoId}`);
+                cleanup();
+                resolve(false);
+            }
+        }, 5000);
+    });
+}
+
+// Modify forceReloadVideo for smoother playback
 async function forceReloadVideo(video) {
     if (!video) {
         console.error('No video element provided');
@@ -2048,32 +2085,9 @@ async function forceReloadVideo(video) {
     video.style.display = 'block';
     
     try {
-        // For weak devices, add a small delay before playing
-        if (devicePerformanceScore <= 2) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Start playback
+        // Wait a short moment before playing
+        await new Promise(resolve => setTimeout(resolve, 100));
         await video.play();
-        
-        // For weak devices, implement pre-buffering
-        if (devicePerformanceScore <= 2) {
-            // When video is playing, start pre-buffering the next loop
-            video.addEventListener('timeupdate', function preBuffer() {
-                if (video.currentTime > video.duration * 0.7) { // When 70% through
-                    // Create a new video element for pre-buffering
-                    const preBufferVideo = document.createElement('video');
-                    preBufferVideo.style.display = 'none';
-                    preBufferVideo.muted = true;
-                    preBufferVideo.src = video.src;
-                    preBufferVideo.load();
-                    
-                    // Remove the listener after pre-buffering starts
-                    video.removeEventListener('timeupdate', preBuffer);
-                }
-            });
-        }
-        
         return true;
     } catch (e) {
         console.error(`Failed to play ${video.id}:`, e);
@@ -2081,26 +2095,16 @@ async function forceReloadVideo(video) {
     }
 }
 
-// Modify setWeatherBackground for better performance
+// Simplified setWeatherBackground function
 async function setWeatherBackground(code) {
     // Get the video ID for this weather code
     const videoId = getVideoIdForWeatherCode(code);
     console.log(`Setting weather background for code ${code} -> video ${videoId}`);
     
-    // Hide all videos first with a fade effect for smoother transition
-    const allVideos = document.querySelectorAll('.weather-video');
-    allVideos.forEach(video => {
-        if (video.style.display !== 'none') {
-            // Add fade out effect
-            video.style.opacity = '0';
-            setTimeout(() => {
-                video.style.display = 'none';
-                video.pause();
-                video.style.opacity = '1';
-            }, 300);
-        } else {
-            video.pause();
-        }
+    // Hide all videos first
+    document.querySelectorAll('.weather-video').forEach(video => {
+        video.style.display = 'none';
+        video.pause();
     });
 
     // Get and handle the active video
@@ -2111,9 +2115,8 @@ async function setWeatherBackground(code) {
     }
 
     try {
-        // Show the video with fade in effect
+        // Show the video
         videoElement.style.display = 'block';
-        videoElement.style.opacity = '0';
         
         // Get or create source element
         let source = videoElement.querySelector('source');
@@ -2122,30 +2125,13 @@ async function setWeatherBackground(code) {
             videoElement.appendChild(source);
         }
         
-        // Set the source with cache busting
+        // Set the source
         const basePath = `components/decorations/${videoId}.mp4`;
         source.src = `${basePath}?t=${Date.now()}`;
         
-        // For weak devices, use lower quality settings
-        if (devicePerformanceScore <= 2) {
-            videoElement.playbackRate = 0.5;
-            // Reduce video quality if possible
-            if (videoElement.videoWidth > 720) {
-                videoElement.style.width = '100%';
-                videoElement.style.height = 'auto';
-            }
-        }
-        
-        // Load and play with fade in
+        // Load and play
         videoElement.load();
         await videoElement.play();
-        
-        // Fade in the video
-        requestAnimationFrame(() => {
-            videoElement.style.transition = 'opacity 0.3s ease-in-out';
-            videoElement.style.opacity = '1';
-        });
-        
         console.log(`Successfully playing ${videoId}`);
     } catch (e) {
         console.error(`Failed to play ${videoId}:`, e);
