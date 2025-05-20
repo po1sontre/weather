@@ -1786,129 +1786,260 @@ function isLunixoApp() {
            window.location.search.includes('lunixo');
 }
 
-// Enhanced video initialization for Lunixo TV app
+// Enhanced video initialization for TV compatibility
 function initializeVideos() {
     console.log('Initializing videos for TV compatibility');
     
     // Get all videos
     const videos = document.querySelectorAll('.weather-video');
     
-    // Special handling for Lunixo app
-    const isLunixo = isLunixoApp();
-    if (isLunixo) {
-        console.log('Lunixo TV app detected - applying special video handling');
+    // Special handling for TV devices
+    const isTV = isLunixoApp();
+    if (isTV) {
+        console.log('TV device detected - applying enhanced video handling');
         
-        // Set a flag in sessionStorage to track refresh state
-        if (!sessionStorage.getItem('lunixo_refresh_count')) {
-            sessionStorage.setItem('lunixo_refresh_count', '1');
-        } else {
-            const count = parseInt(sessionStorage.getItem('lunixo_refresh_count')) + 1;
-            sessionStorage.setItem('lunixo_refresh_count', count.toString());
-            console.log('Lunixo refresh count:', count);
+        // Initialize video retry counter in sessionStorage
+        if (!sessionStorage.getItem('video_retry_count')) {
+            sessionStorage.setItem('video_retry_count', '0');
         }
         
-        // Set a periodic check to ensure videos are playing
+        // Function to force reload a video
+        const forceReloadVideo = (video) => {
+            console.log(`Force reloading video: ${video.id}`);
+            const source = video.querySelector('source');
+            if (source) {
+                // Add timestamp to force reload
+                const currentSrc = source.src.split('?')[0];
+                source.src = `${currentSrc}?t=${new Date().getTime()}`;
+                video.load();
+                video.playbackRate = 0.5;
+                
+                // Reset video state
+                video.currentTime = 0;
+                video.style.display = 'block';
+                
+                // Attempt to play with retry mechanism
+                const playWithRetry = (retryCount = 0) => {
+                    if (retryCount >= 3) {
+                        console.warn(`Max retries reached for ${video.id}`);
+                        return;
+                    }
+                    
+                    video.play().catch(e => {
+                        console.warn(`Play attempt ${retryCount + 1} failed for ${video.id}:`, e);
+                        setTimeout(() => playWithRetry(retryCount + 1), 1000);
+                    });
+                };
+                
+                playWithRetry();
+            }
+        };
+        
+        // Set up periodic video health check
         setInterval(() => {
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-            if (activeVideo && activeVideo.paused) {
-                console.log('Video paused after refresh - attempting to restart');
-                activeVideo.playbackRate = 0.5; // Set slow playback rate
-                activeVideo.play().catch(e => console.warn('Auto-play after refresh failed:', e));
-            }
-        }, 5000);
-        
-        // Apply Lunixo-specific optimizations
-        document.body.classList.add('lunixo-app');
-    }
-    
-    videos.forEach(video => {
-        // Ensure videos have the right attributes
-        video.setAttribute('autoplay', '');
-        video.setAttribute('loop', '');
-        video.setAttribute('preload', 'auto');
-        video.setAttribute('playsinline', '');
-        video.muted = true;
-        video.playbackRate = 0.5; // Set slow playback rate
-        
-        // Add special error recovery for Lunixo
-        if (isLunixo) {
-            video.addEventListener('error', (e) => {
-                console.error(`Error loading video ${video.id}:`, e);
+            if (activeVideo) {
+                // Check if video is actually playing
+                if (activeVideo.paused || activeVideo.ended || activeVideo.error) {
+                    console.log('Video health check: video needs recovery');
+                    forceReloadVideo(activeVideo);
+                }
                 
-                // Try to reload the video source after an error
-                const source = video.querySelector('source');
-                if (source) {
-                    const currentSrc = source.src;
-                    // Force video reload
-                    setTimeout(() => {
-                        source.src = currentSrc + '?t=' + new Date().getTime();
-                        video.load();
-                        video.playbackRate = 0.5; // Ensure playback rate is set after reload
-                        if (video.style.display === 'block') {
-                            video.play().catch(e => console.warn('Reload play failed:', e));
-                        }
-                    }, 1000);
+                // Check if video has been playing for too long (memory leak prevention)
+                const currentTime = activeVideo.currentTime;
+                const duration = activeVideo.duration;
+                if (duration > 0 && currentTime > duration * 0.9) {
+                    console.log('Video near end, preparing for loop');
+                    // Force reload before it ends to prevent stuttering
+                    forceReloadVideo(activeVideo);
+                }
+            }
+        }, 10000); // Check every 10 seconds
+        
+        // Enhanced error recovery
+        videos.forEach(video => {
+            video.addEventListener('error', (e) => {
+                console.error(`Error with video ${video.id}:`, e);
+                const retryCount = parseInt(sessionStorage.getItem('video_retry_count')) || 0;
+                
+                if (retryCount < 5) { // Max 5 retries
+                    sessionStorage.setItem('video_retry_count', (retryCount + 1).toString());
+                    console.log(`Attempting recovery for ${video.id} (attempt ${retryCount + 1})`);
+                    setTimeout(() => forceReloadVideo(video), 1000);
+                } else {
+                    console.error(`Max retries reached for ${video.id}, resetting counter`);
+                    sessionStorage.setItem('video_retry_count', '0');
                 }
             });
-        } else {
-            // Standard error handler
-            video.addEventListener('error', (e) => {
-                console.error(`Error loading video ${video.id}:`, e);
-            });
-        }
-        
-        // Try to preload the video
-        try {
-            // Load the video data
-            video.load();
             
-            // Set up event listeners
-            video.addEventListener('canplaythrough', () => {
-                console.log(`Video ${video.id} can play through`);
-                video.playbackRate = 0.5; // Ensure playback rate is set after loading
-            }, { once: true });
-        } catch (e) {
-            console.warn(`Couldn't preload video ${video.id}:`, e);
-        }
-    });
-    
-    // Add a global click handler to help with autoplay on TVs
-    document.addEventListener('click', () => {
-        const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-        if (activeVideo && activeVideo.paused) {
-            console.log('User interaction detected, playing active video');
-            activeVideo.playbackRate = 0.5; // Ensure playback rate is set
-            activeVideo.play().catch(e => console.warn('Play after click failed:', e));
-        }
-    });
-    
-    // For Lunixo, add a touchstart listener as well (some TV browsers need this)
-    if (isLunixo) {
-        document.addEventListener('touchstart', () => {
-            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-            if (activeVideo && activeVideo.paused) {
-                console.log('Touch interaction detected, playing active video');
-                activeVideo.playbackRate = 0.5; // Ensure playback rate is set
-                activeVideo.play().catch(e => console.warn('Play after touch failed:', e));
-            }
+            // Add loadeddata event handler
+            video.addEventListener('loadeddata', () => {
+                console.log(`Video ${video.id} data loaded successfully`);
+                // Reset retry counter on successful load
+                sessionStorage.setItem('video_retry_count', '0');
+            });
+            
+            // Add stalled event handler
+            video.addEventListener('stalled', () => {
+                console.log(`Video ${video.id} stalled, attempting recovery`);
+                forceReloadVideo(video);
+            });
         });
         
-        // Add visibilitychange handler for Lunixo app
+        // Add visibility change handler with enhanced recovery
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 console.log('Page visibility restored - checking videos');
                 setTimeout(() => {
                     const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
                     if (activeVideo) {
-                        // Force reload the video
-                        activeVideo.load();
-                        activeVideo.playbackRate = 0.5; // Ensure playback rate is set
-                        activeVideo.play().catch(e => console.warn('Visibility play failed:', e));
+                        forceReloadVideo(activeVideo);
                     }
                 }, 500);
             }
         });
+        
+        // Add page focus handler
+        window.addEventListener('focus', () => {
+            console.log('Page focused - checking videos');
+            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+            if (activeVideo) {
+                forceReloadVideo(activeVideo);
+            }
+        });
+        
+        // Apply TV-specific optimizations
+        document.body.classList.add('tv-device');
     }
+    
+    // Common video setup for all devices
+    videos.forEach(video => {
+        // Set video attributes
+        video.setAttribute('autoplay', '');
+        video.setAttribute('loop', '');
+        video.setAttribute('preload', 'auto');
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+        video.playbackRate = 0.5;
+        
+        // Add loading event handlers
+        video.addEventListener('loadstart', () => {
+            console.log(`Video ${video.id} started loading`);
+        });
+        
+        video.addEventListener('canplay', () => {
+            console.log(`Video ${video.id} can play`);
+            if (video.style.display === 'block') {
+                video.play().catch(e => console.warn(`Initial play failed for ${video.id}:`, e));
+            }
+        });
+        
+        // Try to preload the video
+        try {
+            video.load();
+        } catch (e) {
+            console.warn(`Couldn't preload video ${video.id}:`, e);
+        }
+    });
+    
+    // Global click handler for video recovery
+    document.addEventListener('click', () => {
+        const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
+        if (activeVideo) {
+            if (isTV) {
+                forceReloadVideo(activeVideo);
+            } else {
+                activeVideo.play().catch(e => console.warn('Play after click failed:', e));
+            }
+        }
+    });
+}
+
+// Update the setWeatherBackground function to use the enhanced video handling
+function setWeatherBackground(code) {
+    // ... existing code until video handling ...
+    
+    // Handle all video backgrounds for better TV compatibility
+    const allVideos = document.querySelectorAll('.weather-video');
+    if (allVideos.length > 0) {
+        // First hide all videos
+        allVideos.forEach(video => {
+            video.style.display = 'none';
+            video.setAttribute('autoplay', '');
+            video.setAttribute('loop', '');
+            video.setAttribute('preload', 'auto');
+            video.playbackRate = 0.5;
+            
+            try {
+                video.pause();
+                video.currentTime = 0;
+            } catch (e) {
+                console.warn('Could not reset video:', e);
+            }
+        });
+        
+        // Remove cloud decorations when using video background
+        if (useVideoBackground) {
+            const cloudContainer = document.getElementById('cloud-decorations-container');
+            if (cloudContainer) {
+                cloudContainer.innerHTML = '';
+                cloudContainer.style.display = 'none';
+            }
+            
+            // Handle the active video with enhanced TV support
+            const activeVideo = document.getElementById(activeVideoId);
+            if (activeVideo) {
+                // Make the active video visible
+                activeVideo.style.display = 'block';
+                
+                // For videos that have day/night sections
+                if (activeVideoId === 'video-snow' || activeVideoId === 'video-thunder') {
+                    const setupVideo = () => {
+                        const duration = activeVideo.duration;
+                        if (isNight) {
+                            activeVideo.currentTime = (duration / 2) + (duration / 6);
+                        } else {
+                            activeVideo.currentTime = duration / 6;
+                        }
+                        
+                        // Enhanced play attempt with retry
+                        const playWithRetry = (retryCount = 0) => {
+                            if (retryCount >= 3) return;
+                            
+                            activeVideo.play().catch(error => {
+                                console.warn(`Play attempt ${retryCount + 1} failed:`, error);
+                                setTimeout(() => playWithRetry(retryCount + 1), 1000);
+                            });
+                        };
+                        
+                        playWithRetry();
+                    };
+                    
+                    if (activeVideo.readyState >= 1) {
+                        setupVideo();
+                    } else {
+                        activeVideo.addEventListener('loadedmetadata', setupVideo, { once: true });
+                    }
+                } else {
+                    // For standard videos
+                    const playWithRetry = (retryCount = 0) => {
+                        if (retryCount >= 3) return;
+                        
+                        activeVideo.play().catch(error => {
+                            console.warn(`Play attempt ${retryCount + 1} failed:`, error);
+                            setTimeout(() => playWithRetry(retryCount + 1), 1000);
+                        });
+                    };
+                    
+                    playWithRetry();
+                }
+            }
+        } else {
+            // ... rest of existing code ...
+        }
+    }
+    
+    // ... rest of existing code ...
 }
 
 // Function to load and display ads
