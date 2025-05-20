@@ -36,8 +36,8 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.use(express.static('public'));
+app.use('/admin', express.static('admin'));
 
 // Multer configuration for memory storage
 const upload = multer({
@@ -77,6 +77,16 @@ async function saveAds(ads) {
         return false;
     }
 }
+
+// Root route handler
+app.get('/', (req, res) => {
+    try {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (error) {
+        console.error('Error serving index.html:', error);
+        res.status(500).send('Error loading page');
+    }
+});
 
 // API Routes
 app.get('/api/ads', async (req, res) => {
@@ -200,9 +210,14 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
-// Serve index.html for all other routes
+// Catch-all route handler
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    try {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (error) {
+        console.error('Error serving index.html:', error);
+        res.status(500).send('Error loading page');
+    }
 });
 
 // Start server
