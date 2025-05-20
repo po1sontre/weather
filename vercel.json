@@ -22,16 +22,39 @@
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
       },
       "dest": "/api/auth.js"
     },
     {
       "src": "/api/ads",
+      "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      },
       "dest": "/api/ads.js"
     },
     {
       "src": "/api/upload-ad",
+      "methods": ["POST", "OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      },
       "dest": "/api/ads.js"
     },
     {
@@ -39,46 +62,107 @@
       "dest": "/api/delete-ad/[id].js"
     },
     {
-      "src": "/components/decorations/(.*\\.(mp4|css|js|html))",
-      "dest": "/components/decorations/$1",
+      "src": "/admin",
+      "dest": "/public/admin/index.html",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "video/mp4"
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
       }
     },
     {
-      "src": "/admin",
-      "dest": "/public/admin/index.html"
+      "src": "/admin/dashboard.html",
+      "dest": "/public/admin/dashboard.html",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+      }
     },
     {
       "src": "/admin/js/(.*)",
       "dest": "/public/admin/js/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "application/javascript"
+        "content-type": "application/javascript",
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
       "src": "/admin/css/(.*)",
       "dest": "/public/admin/css/$1",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "text/css",
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
-      "src": "/admin/(.*)",
-      "dest": "/public/admin/$1"
+      "src": "/admin/images/(.*)",
+      "dest": "/public/admin/images/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    {
+      "src": "/components/decorations/(.*\\.mp4)",
+      "dest": "/components/decorations/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "video/mp4",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    {
+      "src": "/components/decorations/(.*\\.css)",
+      "dest": "/components/decorations/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "text/css",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    {
+      "src": "/components/decorations/(.*\\.js)",
+      "dest": "/components/decorations/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "application/javascript",
+        "X-Content-Type-Options": "nosniff"
+      }
     },
     {
       "src": "/gen",
-      "dest": "/public/gen.html"
+      "dest": "/public/gen.html",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/public/$1"
+      "dest": "/public/$1",
+      "headers": {
+        "X-Content-Type-Options": "nosniff"
+      }
     }
   ],
   "env": {
