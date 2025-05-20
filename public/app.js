@@ -2355,9 +2355,9 @@ async function forceReloadVideo(video) {
 
 // Modify setWeatherBackground to use enhanced video loading
 async function setWeatherBackground(code) {
-    console.log(`Setting weather background for code: ${code}`);
+    updateDebugOverlay(`Setting weather background for code: ${code}`);
     
-    // Remove all weather classes
+    // First, remove all weather classes and reset background
     document.body.classList.remove(
         'weather-clear',
         'weather-partly-cloudy',
@@ -2367,6 +2367,9 @@ async function setWeatherBackground(code) {
         'weather-foggy',
         'weather-thunder'
     );
+    
+    // Reset background to default cloudy color
+    document.body.style.backgroundColor = '#2c3e50'; // Default cloudy background
     
     // Remove night class if it's day time
     const hour = new Date().getHours();
@@ -2385,27 +2388,36 @@ async function setWeatherBackground(code) {
     let useVideoBackground = true; // Default to using video for all weather types
     let activeVideoId = getVideoIdForWeatherCode(code);
     
+    // Set weather class and background color based on code
     if (code >= 0 && code <= 1) {
         weatherClass = 'weather-clear';
+        document.body.style.backgroundColor = '#87CEEB'; // Sky blue for clear
     } else if (code === 2) {
         weatherClass = 'weather-partly-cloudy';
+        document.body.style.backgroundColor = '#B0C4DE'; // Light steel blue for partly cloudy
     } else if (code === 3) {
         weatherClass = 'weather-cloudy';
+        document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for cloudy
     } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
         weatherClass = 'weather-rainy';
         weatherEffect = 'rain';
+        document.body.style.backgroundColor = '#34495e'; // Darker blue for rain
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
         weatherEffect = 'snow';
+        document.body.style.backgroundColor = '#7f8c8d'; // Gray for snow
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
         weatherEffect = 'fog';
+        document.body.style.backgroundColor = '#95a5a6'; // Light gray for fog
         useVideoBackground = false; // No video for foggy
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
         weatherEffect = 'rain';
+        document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for thunder
     } else {
         weatherClass = 'weather-clear';
+        document.body.style.backgroundColor = '#87CEEB'; // Default to sky blue
     }
     
     // Add the weather class
@@ -2431,22 +2443,20 @@ async function setWeatherBackground(code) {
             // Handle the active video
             const activeVideo = document.getElementById(activeVideoId);
             if (activeVideo) {
-                console.log(`Attempting to load and play video: ${activeVideoId}`);
-                
-                // Try to load and play the video
+                updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
                 const success = await forceReloadVideo(activeVideo);
                 
                 if (!success) {
-                    console.error(`Failed to load video ${activeVideoId}, falling back to cloud decorations`);
-                    // Fallback to cloud decorations if video fails
+                    updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
                     useVideoBackground = false;
+                    // Ensure cloud container is visible for fallback
                     const cloudContainer = document.getElementById('cloud-decorations-container');
                     if (cloudContainer) {
                         cloudContainer.style.display = '';
                     }
                 }
             } else {
-                console.error(`Video element ${activeVideoId} not found`);
+                updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
                 useVideoBackground = false;
             }
         }
@@ -2469,7 +2479,7 @@ async function setWeatherBackground(code) {
             // Trigger cloud decorations
             if (window.cloudDecorations) {
                 setTimeout(() => {
-                    console.log('Generating cloud decorations');
+                    updateDebugOverlay('Generating cloud decorations');
                     if (typeof window.cloudDecorations.generate === 'function') {
                         window.cloudDecorations.generate();
                     }
