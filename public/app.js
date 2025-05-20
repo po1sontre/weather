@@ -1783,44 +1783,94 @@ async function ensureVideoSource(video, videoId) {
         return false;
     }
 
+    console.log(`Loading video: ${videoId}`);
+    
     // Get the base video path
     const basePath = `components/decorations/${videoId}.mp4`;
-    console.log(`Loading video: ${basePath}`);
+    console.log(`Video path: ${basePath}`);
     
-    // Set basic video attributes
+    // Set video attributes for better loading
+    video.setAttribute('preload', 'auto');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
     video.muted = true;
-    video.loop = true;
-    video.playsInline = true;
+    video.playbackRate = 0.5;
     
     // Set the source with cache busting
-    source.src = `${basePath}?t=${Date.now()}`;
-    video.load();
+    const timestamp = Date.now();
+    source.src = `${basePath}?t=${timestamp}`;
     
     return new Promise((resolve) => {
-        const handleCanPlay = () => {
-            console.log(`Video ${videoId} can play`);
+        let loadTimeout;
+        let hasStartedLoading = false;
+        let hasLoadedMetadata = false;
+        
+        const cleanup = () => {
+            clearTimeout(loadTimeout);
+            video.removeEventListener('loadstart', handleLoadStart);
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
+            video.removeEventListener('stalled', handleStalled);
+        };
+        
+        const handleLoadStart = () => {
+            hasStartedLoading = true;
+            console.log(`Video ${videoId} started loading`);
+        };
+        
+        const handleLoadedMetadata = () => {
+            hasLoadedMetadata = true;
+            console.log(`Video ${videoId} metadata loaded`);
+        };
+        
+        const handleCanPlay = () => {
+            console.log(`Video ${videoId} can play`);
+            cleanup();
             resolve(true);
         };
         
         const handleError = (e) => {
-            console.error(`Error loading ${videoId}:`, e);
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
+            console.error(`Error loading ${videoId}:`, e.target.error?.message || 'Unknown error');
+            cleanup();
             resolve(false);
         };
         
+        const handleStalled = () => {
+            console.log(`Video ${videoId} stalled, attempting recovery`);
+            const currentTime = video.currentTime;
+            video.load();
+            if (currentTime > 0) {
+                video.currentTime = currentTime;
+            }
+        };
+        
+        video.addEventListener('loadstart', handleLoadStart);
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
         video.addEventListener('canplay', handleCanPlay);
         video.addEventListener('error', handleError);
+        video.addEventListener('stalled', handleStalled);
         
-        // Simple timeout
-        setTimeout(() => {
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
-            console.log(`Timeout loading ${videoId}`);
-            resolve(false);
-        }, 10000);
+        video.load();
+        
+        loadTimeout = setTimeout(() => {
+            if (!hasStartedLoading) {
+                console.log(`Timeout waiting for ${videoId} to start loading`);
+                cleanup();
+                resolve(false);
+            } else if (!hasLoadedMetadata) {
+                console.log(`Timeout waiting for ${videoId} metadata`);
+                cleanup();
+                resolve(false);
+            } else {
+                console.log(`Attempting to force play ${videoId} after timeout`);
+                video.play().catch(e => {
+                    console.error(`Force play failed:`, e);
+                    cleanup();
+                    resolve(false);
+                });
+            }
+        }, 15000);
     });
 }
 
@@ -1830,17 +1880,19 @@ async function forceReloadVideo(video) {
         return false;
     }
 
-    console.log(`Loading video: ${video.id}`);
+    console.log(`Reloading video: ${video.id}`);
     
-    // Reset video state
     video.pause();
     video.currentTime = 0;
+    video.style.display = 'none';
     
-    // Set source and try to play
-    const success = await ensureVideoSource(video, video.id);
-    if (!success) {
+    const sourceOk = await ensureVideoSource(video, video.id);
+    if (!sourceOk) {
+        console.error(`Failed to set source for ${video.id}`);
         return false;
     }
+    
+    video.style.display = 'block';
     
     try {
         await video.play();
@@ -1944,286 +1996,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }, true);
-    
-    // Rest of initialization code...
-});
-
-// Add visual debug overlay for TV
-function createDebugOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'video-debug-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: #fff;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: monospace;
-        font-size: 14px;
-        z-index: 9999;
-        max-width: 300px;
-        word-break: break-all;
-    `;
-    document.body.appendChild(overlay);
-    return overlay;
-}
-
-function updateDebugOverlay(message, isError = false) {
-    let overlay = document.getElementById('video-debug-overlay');
-    if (!overlay) {
-        overlay = createDebugOverlay();
-    }
-    
-    const timestamp = new Date().toLocaleTimeString();
-    const messageDiv = document.createElement('div');
-    messageDiv.style.cssText = `
-        margin: 5px 0;
-        padding: 5px;
-        border-left: 3px solid ${isError ? '#ff4444' : '#44ff44'};
-        background: ${isError ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 255, 0, 0.2)'};
-    `;
-    messageDiv.textContent = `[${timestamp}] ${message}`;
-    
-    overlay.appendChild(messageDiv);
-    
-    // Keep only last 5 messages
-    while (overlay.children.length > 5) {
-        overlay.removeChild(overlay.firstChild);
-    }
-}
-
-// Modify ensureVideoSource to use visual debug
-async function ensureVideoSource(video, videoId) {
-    const source = video.querySelector('source');
-    if (!source) {
-        updateDebugOverlay(`No source element found for ${videoId}`, true);
-        return false;
-    }
-
-    updateDebugOverlay(`Loading video: ${videoId}`);
-    
-    // Get the base video path - use videoId directly since it already includes the correct suffix
-    const basePath = `components/decorations/${videoId}.mp4`;
-    updateDebugOverlay(`Video path: ${basePath}`);
-    
-    // Set video attributes for better loading
-    video.setAttribute('preload', 'auto');
-    video.setAttribute('playsinline', '');
-    video.setAttribute('webkit-playsinline', '');
-    video.muted = true;
-    video.playbackRate = 0.5;
-    
-    // Set the source with cache busting and range request support
-    const timestamp = Date.now();
-    source.src = `${basePath}?t=${timestamp}`;
-    
-    return new Promise((resolve) => {
-        // Add event listeners before loading
-        let loadTimeout;
-        let hasStartedLoading = false;
-        let hasLoadedMetadata = false;
-        
-        const cleanup = () => {
-            clearTimeout(loadTimeout);
-            video.removeEventListener('loadstart', handleLoadStart);
-            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
-            video.removeEventListener('stalled', handleStalled);
-        };
-        
-        const handleLoadStart = () => {
-            hasStartedLoading = true;
-            updateDebugOverlay(`Video ${videoId} started loading`);
-        };
-        
-        const handleLoadedMetadata = () => {
-            hasLoadedMetadata = true;
-            updateDebugOverlay(`Video ${videoId} metadata loaded`);
-        };
-        
-        const handleCanPlay = () => {
-            updateDebugOverlay(`Video ${videoId} can play`);
-            cleanup();
-            resolve(true);
-        };
-        
-        const handleError = (e) => {
-            updateDebugOverlay(`Error loading ${videoId}: ${e.target.error?.message || 'Unknown error'}`, true);
-            cleanup();
-            resolve(false);
-        };
-        
-        const handleStalled = () => {
-            updateDebugOverlay(`Video ${videoId} stalled, attempting recovery`, true);
-            // Try to recover by reloading the source
-            const currentTime = video.currentTime;
-            video.load();
-            if (currentTime > 0) {
-                video.currentTime = currentTime;
-            }
-        };
-        
-        // Add event listeners
-        video.addEventListener('loadstart', handleLoadStart);
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        video.addEventListener('canplay', handleCanPlay);
-        video.addEventListener('error', handleError);
-        video.addEventListener('stalled', handleStalled);
-        
-        // Start loading the video
-        video.load();
-        
-        // Set a more generous timeout for initial load
-        loadTimeout = setTimeout(() => {
-            if (!hasStartedLoading) {
-                updateDebugOverlay(`Timeout waiting for ${videoId} to start loading`, true);
-                cleanup();
-                resolve(false);
-            } else if (!hasLoadedMetadata) {
-                updateDebugOverlay(`Timeout waiting for ${videoId} metadata`, true);
-                cleanup();
-                resolve(false);
-            } else {
-                // If we have metadata but no canplay, try to force play
-                updateDebugOverlay(`Attempting to force play ${videoId} after timeout`);
-                video.play().catch(e => {
-                    updateDebugOverlay(`Force play failed: ${e.message}`, true);
-                    cleanup();
-                    resolve(false);
-                });
-            }
-        }, 15000); // Increased timeout to 15 seconds
-    });
-}
-
-// Modify forceReloadVideo to handle partial content better
-async function forceReloadVideo(video) {
-    if (!video) {
-        updateDebugOverlay('No video element provided', true);
-        return false;
-    }
-
-    updateDebugOverlay(`Reloading video: ${video.id}`);
-    
-    // Reset video state
-    video.pause();
-    video.currentTime = 0;
-    video.style.display = 'none';
-    
-    // Ensure source is properly set
-    const sourceOk = await ensureVideoSource(video, video.id);
-    if (!sourceOk) {
-        updateDebugOverlay(`Failed to set source for ${video.id}`, true);
-        return false;
-    }
-    
-    // Make video visible
-    video.style.display = 'block';
-    
-    // Try to play with multiple strategies
-    const playStrategies = [
-        {
-            name: 'Direct play with timeout',
-            fn: async () => {
-                try {
-                    const playPromise = video.play();
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Play timeout')), 5000)
-                    );
-                    await Promise.race([playPromise, timeoutPromise]);
-                    return true;
-                } catch (e) {
-                    updateDebugOverlay(`Direct play failed: ${e.message}`, true);
-                    return false;
-                }
-            }
-        },
-        {
-            name: 'Click simulation with delay',
-            fn: async () => {
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const clickEvent = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    });
-                    document.body.dispatchEvent(clickEvent);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await video.play();
-                    return true;
-                } catch (e) {
-                    updateDebugOverlay(`Click simulation failed: ${e.message}`, true);
-                    return false;
-                }
-            }
-        },
-        {
-            name: 'Visibility toggle with reload',
-            fn: async () => {
-                try {
-                    document.body.style.visibility = 'hidden';
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    video.load();
-                    document.body.style.visibility = 'visible';
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await video.play();
-                    return true;
-                } catch (e) {
-                    updateDebugOverlay(`Visibility toggle failed: ${e.message}`, true);
-                    return false;
-                }
-            }
-        },
-        {
-            name: 'Full video reset',
-            fn: async () => {
-                try {
-                    const currentSrc = video.src;
-                    video.style.display = 'none';
-                    video.removeAttribute('src');
-                    video.load();
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    video.src = currentSrc;
-                    video.load();
-                    video.style.display = 'block';
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await video.play();
-                    return true;
-                } catch (e) {
-                    updateDebugOverlay(`Video reset failed: ${e.message}`, true);
-                    return false;
-                }
-            }
-        }
-    ];
-    
-    // Try each strategy in sequence with longer delays
-    for (let i = 0; i < playStrategies.length; i++) {
-        const strategy = playStrategies[i];
-        updateDebugOverlay(`Trying strategy ${i + 1}: ${strategy.name}`);
-        const success = await strategy.fn();
-        if (success) {
-            updateDebugOverlay(`Success with strategy ${i + 1}: ${strategy.name}`);
-            return true;
-        }
-        // Longer delay between strategies
-        await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    
-    updateDebugOverlay(`All play strategies failed for ${video.id}`, true);
-    return false;
-}
-
-
-// Add debug overlay initialization
-document.addEventListener('DOMContentLoaded', () => {
-    // Create debug overlay
-    createDebugOverlay();
-    updateDebugOverlay('Weather app initialized');
     
     // Rest of initialization code...
 });
