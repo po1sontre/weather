@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Store authentication state
                 sessionStorage.setItem('isAuthenticated', 'true');
                 // Redirect to dashboard
-                window.location.href = 'dashboard.html';
+                window.location.href = '/admin/dashboard.html';
             } else {
                 errorMessage.style.display = 'block';
                 errorMessage.textContent = 'Invalid username or password';
@@ -49,9 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check if user is already logged in
-    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+    if (window.location.pathname.includes('index.html') || window.location.pathname === '/admin') {
         if (sessionStorage.getItem('isAuthenticated')) {
-            window.location.href = 'dashboard.html';
+            window.location.href = '/admin/dashboard.html';
         }
     }
 });
