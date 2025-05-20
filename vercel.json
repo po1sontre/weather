@@ -44,12 +44,12 @@
       "dest": "/public/admin/index.html"
     },
     {
-      "src": "/admin/(.*)",
-      "dest": "/public/admin/$1"
-    },
-    {
-      "src": "/gen",
-      "dest": "/public/gen.html"
+      "src": "/admin/js/(.*)",
+      "dest": "/public/admin/js/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "application/javascript"
+      }
     },
     {
       "src": "/admin/css/(.*)",
@@ -59,11 +59,12 @@
       }
     },
     {
-      "src": "/admin/js/(.*)",
-      "dest": "/public/admin/js/$1",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
+      "src": "/admin/(.*)",
+      "dest": "/public/admin/$1"
+    },
+    {
+      "src": "/gen",
+      "dest": "/public/gen.html"
     },
     {
       "handle": "filesystem"
