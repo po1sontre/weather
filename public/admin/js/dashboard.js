@@ -151,7 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="ad-info">
                         <p class="ad-link">${ad.link}</p>
                         <div class="ad-actions">
-                            <button onclick="editAd('${ad.id}')" class="edit-btn">Edit</button>
                             <button onclick="deleteAd('${ad.id}')" class="delete-btn">Delete</button>
                         </div>
                     </div>
