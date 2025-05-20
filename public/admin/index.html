@@ -6,6 +6,8 @@
     <title>Ad Manager - Login</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="/admin/css/styles.css">
+    <!-- Add Font Awesome for the eye icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
     <div class="login-container">
@@ -20,16 +22,16 @@
                 <p>Sign in to manage your advertisements</p>
             </div>
             
-            <form id="loginForm" class="login-form">
+            <form id="loginForm" class="login-form" method="POST" action="javascript:void(0);">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
                 </div>
                 
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="password-input">
-                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
                         <button type="button" id="togglePassword" class="toggle-password" aria-label="Toggle password visibility">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -43,8 +45,78 @@
         </div>
     </div>
     
-    <!-- Add Font Awesome for the eye icon -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <script src="/admin/js/login.js"></script>
+    <script>
+        // Inline the login.js code to ensure it loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const errorMessage = document.getElementById('errorMessage');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+
+            // Check if already logged in
+            if (sessionStorage.getItem('isAuthenticated')) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Toggle password visibility
+            const togglePassword = document.getElementById('togglePassword');
+            if (togglePassword) {
+                togglePassword.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('fa-eye');
+                    this.querySelector('i').classList.toggle('fa-eye-slash');
+                });
+            }
+
+            // Handle form submission
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const username = usernameInput.value.trim();
+                    const password = passwordInput.value.trim();
+
+                    if (!username || !password) {
+                        showError('Please enter both username and password');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ username, password })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Store authentication state
+                            sessionStorage.setItem('isAuthenticated', 'true');
+                            // Redirect to dashboard
+                            window.location.href = 'dashboard.html';
+                        } else {
+                            showError(data.error || 'Login failed');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showError('An error occurred during login');
+                    }
+                });
+            }
+
+            // Show error message
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                // Clear password field on error
+                passwordInput.value = '';
+            }
+        });
+    </script>
 </body>
 </html>
