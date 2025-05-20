@@ -44,11 +44,22 @@ async function saveAds(ads) {
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 2 * 1024 * 1024, // 2MB
+        fileSize: 3 * 1024 * 1024, // 3MB limit (increased from 2MB)
         files: 1
     },
     fileFilter: function (req, file, cb) {
-        console.log('Processing file:', file.originalname, 'MIME type:', file.mimetype);
+        console.log('Processing file:', {
+            name: file.originalname,
+            size: file.size,
+            mimetype: file.mimetype
+        });
+
+        // Check file size before processing
+        if (file.size > 3 * 1024 * 1024) {
+            console.error('File too large:', file.size);
+            return cb(new Error('File size must be less than 3MB'));
+        }
+
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(file.mimetype)) {
             console.error('Invalid file type:', file.mimetype);
@@ -68,7 +79,8 @@ module.exports = async (req, res) => {
         path: req.path,
         headers: req.headers,
         hasBody: !!req.body,
-        contentType: req.headers['content-type']
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length']
     });
 
     // Set CORS headers
@@ -98,7 +110,11 @@ module.exports = async (req, res) => {
             // Check if BLOB_READ_WRITE_TOKEN is available
             if (!process.env.BLOB_READ_WRITE_TOKEN) {
                 console.error('BLOB_READ_WRITE_TOKEN is not configured');
-                throw new Error('Blob storage is not configured');
+                return res.status(500).json({ 
+                    error: 'Server configuration error',
+                    details: 'Blob storage is not configured',
+                    code: 'CONFIG_ERROR'
+                });
             }
 
             // Handle file upload using multer middleware
@@ -110,10 +126,20 @@ module.exports = async (req, res) => {
                         code: err.code,
                         stack: err.stack
                     });
+
+                    // Handle specific multer errors
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return res.status(400).json({ 
+                            error: 'File too large',
+                            details: 'Maximum file size is 3MB',
+                            code: 'FILE_TOO_LARGE'
+                        });
+                    }
+
                     return res.status(400).json({ 
                         error: 'File upload error',
                         details: err.message,
-                        code: 'MULTER_ERROR'
+                        code: err.code || 'MULTER_ERROR'
                     });
                 }
 
@@ -121,6 +147,7 @@ module.exports = async (req, res) => {
                     console.error('No file in request');
                     return res.status(400).json({ 
                         error: 'No image file provided',
+                        details: 'Please select an image file to upload',
                         code: 'NO_FILE'
                     });
                 }
@@ -187,6 +214,16 @@ module.exports = async (req, res) => {
                         code: error.code,
                         stack: error.stack
                     });
+
+                    // Handle specific blob storage errors
+                    if (error.message.includes('blob storage')) {
+                        return res.status(500).json({ 
+                            error: 'Storage error',
+                            details: 'Failed to store the image. Please try again.',
+                            code: 'STORAGE_ERROR'
+                        });
+                    }
+
                     res.status(500).json({ 
                         error: 'Failed to process upload',
                         details: error.message,

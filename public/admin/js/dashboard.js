@@ -75,17 +75,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: formData
                 });
 
+                const result = await response.json();
+
                 if (!response.ok) {
-                    throw new Error('Upload failed');
+                    throw new Error(result.error || result.details || 'Upload failed');
                 }
 
-                const result = await response.json();
                 showSuccess('Ad uploaded successfully');
                 adForm.reset();
+                // Reset the file preview
+                const placeholder = document.querySelector('.file-upload-placeholder');
+                if (placeholder) {
+                    placeholder.innerHTML = `
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <span>Click to upload image</span>
+                    `;
+                }
                 loadCurrentAds();
             } catch (error) {
                 console.error('Upload error:', error);
-                showError('Failed to upload ad');
+                showError(error.message || 'Failed to upload ad. Please try again.');
             }
         });
     }
