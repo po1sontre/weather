@@ -773,7 +773,7 @@ async function fetchWeatherData() {
             const cityName = document.querySelector('.location').textContent;
             districtInfo.innerHTML = `
                 <div class="district-header">
-                    <span class="district-icon">🌍</span>
+                    <span class="district-icon"></span>
                     <span class="district-title">${districtName}</span>
                 </div>
                 <div class="district-subtitle">
@@ -1366,7 +1366,7 @@ function setWeatherBackground(code) {
     let weatherClass = '';
     let weatherEffect = '';
     let useVideoBackground = true; // Default to using video for all weather types
-    let activeVideoId = ''; // ID of the video element to use
+    let activeVideoId = '';
     
     if (code >= 0 && code <= 1) {
         weatherClass = 'weather-clear';
@@ -1376,7 +1376,7 @@ function setWeatherBackground(code) {
         activeVideoId = 'video-partly-cloudy';
     } else if (code === 3) {
         weatherClass = 'weather-cloudy';
-        useVideoBackground = false; // No video for cloudy
+        activeVideoId = 'video-cloudy'; // Enable video for cloudy weather
     } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
         weatherClass = 'weather-rainy';
         weatherEffect = 'rain';
@@ -1384,7 +1384,7 @@ function setWeatherBackground(code) {
     } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
         weatherClass = 'weather-snowy';
         weatherEffect = 'snow';
-        activeVideoId = 'video-snow'; // Updated to use the new snow video
+        activeVideoId = 'video-snow';
     } else if (code === 45 || code === 48) {
         weatherClass = 'weather-foggy';
         weatherEffect = 'fog';
@@ -1392,7 +1392,7 @@ function setWeatherBackground(code) {
     } else if (code >= 95) {
         weatherClass = 'weather-thunder';
         weatherEffect = 'rain';
-        activeVideoId = 'video-thunder'; // Updated to use the thunder video
+        activeVideoId = 'video-thunder';
     } else {
         weatherClass = 'weather-clear';
         activeVideoId = 'video-clearsky';
@@ -1812,6 +1812,7 @@ function initializeVideos() {
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo && activeVideo.paused) {
                 console.log('Video paused after refresh - attempting to restart');
+                activeVideo.playbackRate = 0.5; // Set slow playback rate
                 activeVideo.play().catch(e => console.warn('Auto-play after refresh failed:', e));
             }
         }, 5000);
@@ -1827,6 +1828,7 @@ function initializeVideos() {
         video.setAttribute('preload', 'auto');
         video.setAttribute('playsinline', '');
         video.muted = true;
+        video.playbackRate = 0.5; // Set slow playback rate
         
         // Add special error recovery for Lunixo
         if (isLunixo) {
@@ -1841,6 +1843,7 @@ function initializeVideos() {
                     setTimeout(() => {
                         source.src = currentSrc + '?t=' + new Date().getTime();
                         video.load();
+                        video.playbackRate = 0.5; // Ensure playback rate is set after reload
                         if (video.style.display === 'block') {
                             video.play().catch(e => console.warn('Reload play failed:', e));
                         }
@@ -1862,6 +1865,7 @@ function initializeVideos() {
             // Set up event listeners
             video.addEventListener('canplaythrough', () => {
                 console.log(`Video ${video.id} can play through`);
+                video.playbackRate = 0.5; // Ensure playback rate is set after loading
             }, { once: true });
         } catch (e) {
             console.warn(`Couldn't preload video ${video.id}:`, e);
@@ -1873,6 +1877,7 @@ function initializeVideos() {
         const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
         if (activeVideo && activeVideo.paused) {
             console.log('User interaction detected, playing active video');
+            activeVideo.playbackRate = 0.5; // Ensure playback rate is set
             activeVideo.play().catch(e => console.warn('Play after click failed:', e));
         }
     });
@@ -1883,6 +1888,7 @@ function initializeVideos() {
             const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
             if (activeVideo && activeVideo.paused) {
                 console.log('Touch interaction detected, playing active video');
+                activeVideo.playbackRate = 0.5; // Ensure playback rate is set
                 activeVideo.play().catch(e => console.warn('Play after touch failed:', e));
             }
         });
@@ -1896,6 +1902,7 @@ function initializeVideos() {
                     if (activeVideo) {
                         // Force reload the video
                         activeVideo.load();
+                        activeVideo.playbackRate = 0.5; // Ensure playback rate is set
                         activeVideo.play().catch(e => console.warn('Visibility play failed:', e));
                     }
                 }, 500);

@@ -1128,6 +1128,11 @@ body.weather-partly-cloudy #video-partly-cloudy {
     display: block;
 }
 
+body.weather-cloudy #video-cloudy {
+    opacity: 0.9;
+    display: block;
+}
+
 body.weather-rainy #video-rain {
     opacity: 0.9;
     display: block;
@@ -1144,11 +1149,9 @@ body.weather-thunder #video-thunder {
 }
 
 /* Night mode handling for videos */
-body.night #video-snow {
-    opacity: 0.8; /* Slightly lower opacity at night */
-}
-
-body.night #video-thunder {
+body.night #video-snow,
+body.night #video-thunder,
+body.night #video-cloudy {
     opacity: 0.8; /* Slightly lower opacity at night */
 }
 
@@ -1316,6 +1319,7 @@ body.weather-snowy.night #simple-background {
     /* Higher opacity for better visibility on large TV screens */
     body.weather-clear #video-clearsky,
     body.weather-partly-cloudy #video-partly-cloudy,
+    body.weather-cloudy #video-cloudy,
     body.weather-rainy #video-rain,
     body.weather-snowy #video-snow,
     body.weather-thunder #video-thunder {
@@ -1347,6 +1351,7 @@ body.weather-snowy.night #simple-background {
     /* Force display for active weather video */
     body.weather-clear #video-clearsky,
     body.weather-partly-cloudy #video-partly-cloudy,
+    body.weather-cloudy #video-cloudy,
     body.weather-rainy #video-rain,
     body.weather-snowy #video-snow,
     body.weather-thunder #video-thunder {
@@ -1436,6 +1441,7 @@ canvas {
 /* Force display of selected videos in Lunixo - needed after refresh */
 .lunixo-app.weather-clear #video-clearsky,
 .lunixo-app.weather-partly-cloudy #video-partly-cloudy,
+.lunixo-app.weather-cloudy #video-cloudy,
 .lunixo-app.weather-rainy #video-rain,
 .lunixo-app.weather-snowy #video-snow,
 .lunixo-app.weather-thunder #video-thunder {
