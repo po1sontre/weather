@@ -1,50 +1,25 @@
-const fs = require('fs').promises;
-const path = require('path');
 const { put, del } = require('@vercel/blob');
 const multer = require('multer');
 
-// File path for storing ads metadata
-const ADS_FILE_PATH = path.join(process.cwd(), 'data', 'ads.json');
+// In-memory storage for ads (will reset on cold start, but that's okay for this use case)
+let ads = [];
 
-// Ensure data directory exists
-async function ensureDataDir() {
-    const dataDir = path.join(process.cwd(), 'data');
-    try {
-        await fs.access(dataDir);
-    } catch {
-        await fs.mkdir(dataDir, { recursive: true });
-    }
-}
-
-// Helper function to get ads from JSON file
+// Helper function to get ads
 async function getAds() {
-    try {
-        await ensureDataDir();
-        const data = await fs.readFile(ADS_FILE_PATH, 'utf8').catch(() => '[]');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading ads file:', error);
-        return [];
-    }
+    return ads;
 }
 
-// Helper function to save ads to JSON file
-async function saveAds(ads) {
-    try {
-        await ensureDataDir();
-        await fs.writeFile(ADS_FILE_PATH, JSON.stringify(ads, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error saving ads file:', error);
-        return false;
-    }
+// Helper function to save ads
+async function saveAds(newAds) {
+    ads = newAds;
+    return true;
 }
 
 // Configure multer with optimized settings
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 3 * 1024 * 1024, // 3MB limit (increased from 2MB)
+        fileSize: 3 * 1024 * 1024, // 3MB limit
         files: 1
     },
     fileFilter: function (req, file, cb) {
@@ -102,8 +77,8 @@ module.exports = async (req, res) => {
     try {
         if (req.method === 'GET') {
             console.log('Handling GET request for ads');
-            const ads = await getAds();
-            res.json(ads);
+            const currentAds = await getAds();
+            res.json(currentAds);
         } else if (req.method === 'POST') {
             console.log('Handling POST request for ad upload');
             
@@ -174,12 +149,8 @@ module.exports = async (req, res) => {
 
                     console.log('File uploaded to blob storage:', blob.url);
 
-                    // Ensure data directory exists
-                    await ensureDataDir();
-                    console.log('Data directory checked/created');
-
-                    const ads = await getAds();
-                    console.log('Current ads count:', ads.length);
+                    const currentAds = await getAds();
+                    console.log('Current ads count:', currentAds.length);
 
                     const newAd = {
                         id: Date.now().toString(),
@@ -188,10 +159,10 @@ module.exports = async (req, res) => {
                         createdAt: new Date().toISOString()
                     };
 
-                    ads.push(newAd);
+                    currentAds.push(newAd);
                     console.log('Saving new ad:', newAd.id);
                     
-                    const saved = await saveAds(ads);
+                    const saved = await saveAds(currentAds);
                     
                     if (!saved) {
                         console.error('Failed to save ad data, attempting to delete blob');
@@ -233,14 +204,14 @@ module.exports = async (req, res) => {
             });
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
-            const ads = await getAds();
-            const adIndex = ads.findIndex(ad => ad.id === id);
+            const currentAds = await getAds();
+            const adIndex = currentAds.findIndex(ad => ad.id === id);
             
             if (adIndex === -1) {
                 return res.status(404).json({ error: 'Ad not found' });
             }
 
-            const ad = ads[adIndex];
+            const ad = currentAds[adIndex];
             
             // Delete image from Vercel Blob
             if (ad.imageUrl) {
@@ -253,8 +224,8 @@ module.exports = async (req, res) => {
                 }
             }
 
-            ads.splice(adIndex, 1);
-            const saved = await saveAds(ads);
+            currentAds.splice(adIndex, 1);
+            const saved = await saveAds(currentAds);
             
             if (!saved) {
                 throw new Error('Failed to save ad data after deletion');
@@ -281,7 +252,4 @@ module.exports = async (req, res) => {
             code: error.code || 'SERVER_ERROR'
         });
     }
-};
-
-// Export getAds function for other modules if needed
-module.exports.getAds = getAds; 
+}; 
