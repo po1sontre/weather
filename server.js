@@ -9,8 +9,27 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Redis connection configuration
+const redisConfig = {
+    host: process.env.REDIS_URL.split('@')[1].split(':')[0],
+    port: parseInt(process.env.REDIS_URL.split(':').pop()),
+    password: process.env.REDIS_URL.split('@')[0].split('//')[1].split(':')[1],
+    tls: {},
+    retryStrategy: function(times) {
+        return Math.min(times * 50, 2000);
+    },
+    maxRetriesPerRequest: 3
+};
+
 // Initialize Redis client
-const redis = new Redis(process.env.REDIS_URL);
+let redis;
+function getRedisClient() {
+    if (!redis) {
+        redis = new Redis(redisConfig);
+        redis.on('error', (err) => console.error('Redis Client Error:', err));
+    }
+    return redis;
+}
 
 // Middleware
 app.use(cors());
@@ -38,7 +57,8 @@ const upload = multer({
 // Helper function to get ads from Redis
 async function getAds() {
     try {
-        const ads = await redis.get('ads');
+        const client = getRedisClient();
+        const ads = await client.get('ads');
         return ads ? JSON.parse(ads) : [];
     } catch (error) {
         console.error('Error getting ads from Redis:', error);
@@ -49,7 +69,8 @@ async function getAds() {
 // Helper function to save ads to Redis
 async function saveAds(ads) {
     try {
-        await redis.set('ads', JSON.stringify(ads));
+        const client = getRedisClient();
+        await client.set('ads', JSON.stringify(ads));
         return true;
     } catch (error) {
         console.error('Error saving ads to Redis:', error);
