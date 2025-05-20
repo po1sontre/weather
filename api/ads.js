@@ -62,8 +62,14 @@ const upload = multer({
 const uploadMiddleware = upload.single('image');
 
 module.exports = async (req, res) => {
-    console.log('Request method:', req.method);
-    console.log('Request path:', req.url);
+    console.log('Request details:', {
+        method: req.method,
+        url: req.url,
+        path: req.path,
+        headers: req.headers,
+        hasBody: !!req.body,
+        contentType: req.headers['content-type']
+    });
 
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -76,19 +82,34 @@ module.exports = async (req, res) => {
 
     // Handle OPTIONS request
     if (req.method === 'OPTIONS') {
+        console.log('Handling OPTIONS request');
         res.status(200).end();
         return;
     }
 
     try {
         if (req.method === 'GET') {
+            console.log('Handling GET request for ads');
             const ads = await getAds();
             res.json(ads);
         } else if (req.method === 'POST') {
+            console.log('Handling POST request for ad upload');
+            
+            // Check if BLOB_READ_WRITE_TOKEN is available
+            if (!process.env.BLOB_READ_WRITE_TOKEN) {
+                console.error('BLOB_READ_WRITE_TOKEN is not configured');
+                throw new Error('Blob storage is not configured');
+            }
+
             // Handle file upload using multer middleware
             uploadMiddleware(req, res, async function(err) {
                 if (err) {
-                    console.error('Multer error:', err);
+                    console.error('Multer error:', {
+                        name: err.name,
+                        message: err.message,
+                        code: err.code,
+                        stack: err.stack
+                    });
                     return res.status(400).json({ 
                         error: 'File upload error',
                         details: err.message,
@@ -111,12 +132,8 @@ module.exports = async (req, res) => {
                         mimetype: req.file.mimetype
                     });
 
-                    // Check if BLOB_READ_WRITE_TOKEN is available
-                    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-                        throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-                    }
-
                     // Upload image to Vercel Blob
+                    console.log('Uploading to blob storage...');
                     const blob = await put(req.file.originalname, req.file.buffer, {
                         access: 'public',
                         contentType: req.file.mimetype,
@@ -124,12 +141,19 @@ module.exports = async (req, res) => {
                     });
 
                     if (!blob || !blob.url) {
+                        console.error('Blob upload failed:', blob);
                         throw new Error('Failed to upload image to blob storage');
                     }
 
                     console.log('File uploaded to blob storage:', blob.url);
 
+                    // Ensure data directory exists
+                    await ensureDataDir();
+                    console.log('Data directory checked/created');
+
                     const ads = await getAds();
+                    console.log('Current ads count:', ads.length);
+
                     const newAd = {
                         id: Date.now().toString(),
                         imageUrl: blob.url,
@@ -138,9 +162,12 @@ module.exports = async (req, res) => {
                     };
 
                     ads.push(newAd);
+                    console.log('Saving new ad:', newAd.id);
+                    
                     const saved = await saveAds(ads);
                     
                     if (!saved) {
+                        console.error('Failed to save ad data, attempting to delete blob');
                         // If saving fails, try to delete the uploaded blob
                         try {
                             await del(blob.url);
@@ -154,7 +181,12 @@ module.exports = async (req, res) => {
                     console.log('Ad saved successfully:', newAd.id);
                     res.json(newAd);
                 } catch (error) {
-                    console.error('Error processing upload:', error);
+                    console.error('Error processing upload:', {
+                        name: error.name,
+                        message: error.message,
+                        code: error.code,
+                        stack: error.stack
+                    });
                     res.status(500).json({ 
                         error: 'Failed to process upload',
                         details: error.message,
@@ -193,13 +225,19 @@ module.exports = async (req, res) => {
 
             res.json({ message: 'Ad deleted successfully' });
         } else {
+            console.log('Method not allowed:', req.method);
             res.status(405).json({ 
                 error: 'Method not allowed',
                 code: 'METHOD_NOT_ALLOWED'
             });
         }
     } catch (error) {
-        console.error('API Error:', error);
+        console.error('API Error:', {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).json({ 
             error: 'Internal server error',
             details: error.message,
