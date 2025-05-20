@@ -19,22 +19,34 @@
     <!-- Each video is now hidden by default and lazily loaded -->
     <div id="video-container" class="video-container">
         <!-- Clear sky video -->
-        <video id="clearsky_daytime" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="clearsky_daytime" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
         
         <!-- Partly cloudy video -->
-        <video id="partly_cloudy_daytime" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="partly_cloudy_daytime" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
         
         <!-- Cloudy video -->
-        <video id="cloudy_daytime" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="cloudy_daytime" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
         
         <!-- Rain video -->
-        <video id="rain_daytime" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="rain_daytime" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
         
         <!-- Snow video -->
-        <video id="snow_daytime_night" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="snow_daytime_night" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
         
         <!-- Thunderstorm video -->
-        <video id="rain_thunderstorm_night_day" class="weather-video" muted playsinline autoplay loop></video>
+        <video id="rain_thunderstorm_night_day" class="weather-video" muted playsinline autoplay loop preload="auto" style="display:none">
+            <source type="video/mp4">
+        </video>
     </div>
     
     <!-- Time display (moved to top-right corner) -->

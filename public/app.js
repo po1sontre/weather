@@ -1745,9 +1745,9 @@ function getTizenTVModel() {
 function getVideoIdForWeatherCode(code) {
     const videoMap = {
         0: 'clearsky_daytime',      // Clear sky
-        1: 'partly_cloudy_daytime', // Partly cloudy
+        1: 'clearsky_daytime',      // Mainly clear
         2: 'partly_cloudy_daytime', // Partly cloudy
-        3: 'cloudy_daytime',        // Cloudy
+        3: 'cloudy_daytime',        // Overcast
         45: 'cloudy_daytime',       // Foggy
         48: 'cloudy_daytime',       // Depositing rime fog
         51: 'rain_daytime',         // Light drizzle
@@ -1769,431 +1769,28 @@ function getVideoIdForWeatherCode(code) {
         96: 'rain_thunderstorm_night_day', // Thunderstorm with slight hail
         99: 'rain_thunderstorm_night_day'  // Thunderstorm with heavy hail
     };
-    return videoMap[code] || null;
+    
+    // Log the mapping for debugging
+    console.log(`Weather code ${code} maps to video ID: ${videoMap[code] || 'none'}`);
+    
+    return videoMap[code] || 'clearsky_daytime'; // Default to clear sky if no mapping found
 }
 
-function ensureVideoSource(video, videoId) {
-    return new Promise((resolve, reject) => {
-        try {
-            const videoPath = `components/decorations/${videoId}.mp4`;
-            updateDebugOverlay(`Setting video source: ${videoPath}`, 'info');
-            
-            // Set the source with cache busting
-            const timestamp = new Date().getTime();
-            video.src = `${videoPath}?t=${timestamp}`;
-            
-            // Verify the video can play
-            const canPlayPromise = new Promise((resolveCanPlay) => {
-                const timeout = setTimeout(() => {
-                    updateDebugOverlay(`Timeout waiting for video to be playable: ${videoId}`, 'error');
-                    resolveCanPlay(false);
-                }, 10000);
-
-                const canPlayHandler = () => {
-                    clearTimeout(timeout);
-                    video.removeEventListener('canplay', canPlayHandler);
-                    resolveCanPlay(true);
-                };
-
-                video.addEventListener('canplay', canPlayHandler);
-            });
-
-            canPlayPromise.then(canPlay => {
-                if (canPlay) {
-                    updateDebugOverlay(`Video source set and can play: ${videoId}`, 'success');
-                    resolve(true);
-                } else {
-                    updateDebugOverlay(`Video cannot play: ${videoId}`, 'error');
-                    reject(new Error(`Video cannot play: ${videoId}`));
-                }
-            });
-        } catch (error) {
-            updateDebugOverlay(`Error setting video source: ${error.message}`, 'error');
-            reject(error);
-        }
-    });
-}
-
-// Function to preload a specific video for TV
-async function preloadVideoForTV(videoId) {
-    const video = document.getElementById(videoId);
-    if (!video) {
-        console.warn(`Video element ${videoId} not found`);
-        return;
-    }
-
-    console.log(`Starting preload for TV: ${videoId}`);
-    
-    // Set lowest possible quality for initial load
-    video.setAttribute('preload', 'auto');
-    video.playbackRate = 0.5;
-    
-    // Force video to load in memory
-    const source = video.querySelector('source');
-    if (source) {
-        const originalSrc = source.src.split('?')[0];
-        // Add cache-busting and quality parameters
-        source.src = `${originalSrc}?t=${Date.now()}&q=low&preload=true`;
-        
-        // Create a new video element for preloading
-        const preloadVideo = document.createElement('video');
-        preloadVideo.style.display = 'none';
-        preloadVideo.setAttribute('preload', 'auto');
-        preloadVideo.setAttribute('muted', 'true');
-        preloadVideo.src = source.src;
-        
-        // Add to DOM temporarily for better loading
-        document.body.appendChild(preloadVideo);
-        
-        return new Promise((resolve, reject) => {
-            // Start loading
-            preloadVideo.load();
-            
-            // Monitor loading progress
-            let loadAttempts = 0;
-            const maxAttempts = 3;
-            
-            const attemptLoad = () => {
-                loadAttempts++;
-                console.log(`Preload attempt ${loadAttempts} for ${videoId}`);
-                
-                // Try to load the video
-                preloadVideo.play().then(() => {
-                    console.log(`Preload successful for ${videoId}`);
-                    // Copy the loaded video data
-                    video.src = preloadVideo.src;
-                    video.load();
-                    // Clean up
-                    preloadVideo.remove();
-                    resolve();
-                }).catch(error => {
-                    console.warn(`Preload attempt ${loadAttempts} failed:`, error);
-                    if (loadAttempts < maxAttempts) {
-                        // Try again with a delay
-                        setTimeout(attemptLoad, 2000);
-                    } else {
-                        // Fallback to direct loading
-                        console.log(`Falling back to direct loading for ${videoId}`);
-                        video.src = originalSrc;
-                        video.load();
-                        preloadVideo.remove();
-                        resolve();
-                    }
-                });
-            };
-            
-            // Start first attempt
-            attemptLoad();
-        });
-    }
-    return Promise.reject(new Error('No source element found'));
-}
-
-// Function to unload unnecessary videos
-function unloadUnnecessaryVideos(currentVideoId) {
-    const allVideos = document.querySelectorAll('.weather-video');
-    allVideos.forEach(video => {
-        if (video.id !== currentVideoId) {
-            // Reset video state
-            video.style.display = 'none';
-            video.pause();
-            video.removeAttribute('src');
-            video.load();
-            
-            // Clear source
-            const source = video.querySelector('source');
-            if (source) {
-                source.removeAttribute('src');
-            }
-            
-            console.log(`Unloaded unnecessary video: ${video.id}`);
-        }
-    });
-}
-
-// Enhanced video initialization for TV compatibility
-async function initializeVideos() {
-    console.log('Initializing videos with TV priority');
-    
-    // Get all videos
-    const videos = document.querySelectorAll('.weather-video');
-    
-    // Special handling for Tizen TVs
-    const isTV = isTizenTV();
-    const tvModel = getTizenTVModel();
-    console.log(`TV Model: ${tvModel}`);
-    
-    if (isTV) {
-        console.log('Tizen TV detected - applying TV-first video handling');
-        
-        // Initialize video retry counter
-        if (!sessionStorage.getItem('video_retry_count')) {
-            sessionStorage.setItem('video_retry_count', '0');
-        }
-        
-        // Function to force reload a video with TV-first approach
-        const forceReloadVideo = async (video) => {
-            console.log(`Force reloading video for TV: ${video.id}`);
-            
-            // TV-specific video attributes
-            video.setAttribute('x-webkit-airplay', 'allow');
-            video.setAttribute('webkit-playsinline', 'true');
-            video.setAttribute('playsinline', 'true');
-            video.setAttribute('muted', 'true');
-            video.setAttribute('autoplay', 'true');
-            video.setAttribute('loop', 'true');
-            video.setAttribute('preload', 'auto');
-            
-            // Try aggressive preloading first
-            try {
-                await preloadVideoForTV(video.id);
-            } catch (e) {
-                console.warn(`Preload failed for ${video.id}, falling back to direct load:`, e);
-            }
-            
-            // Reset video state
-            video.currentTime = 0;
-            video.style.display = 'block';
-            
-            // TV-specific play attempt with multiple fallbacks
-            const playWithTVFallback = async (retryCount = 0) => {
-                if (retryCount >= 5) {
-                    console.warn(`Max retries reached for ${video.id} on TV`);
-                    return;
-                }
-                
-                // Try different play strategies in sequence
-                const strategies = [
-                    // Strategy 1: Direct play with timeout
-                    async () => {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        return video.play();
-                    },
-                    // Strategy 2: Play with visibility toggle
-                    async () => {
-                        document.body.style.visibility = 'hidden';
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        document.body.style.visibility = 'visible';
-                        return video.play();
-                    },
-                    // Strategy 3: Play with focus and click simulation
-                    async () => {
-                        window.focus();
-                        const clickEvent = new MouseEvent('click', {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window
-                        });
-                        document.body.dispatchEvent(clickEvent);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        return video.play();
-                    },
-                    // Strategy 4: Play with video reset
-                    async () => {
-                        video.style.display = 'none';
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        video.style.display = 'block';
-                        return video.play();
-                    },
-                    // Strategy 5: Play with full reload
-                    async () => {
-                        const source = video.querySelector('source');
-                        if (source) {
-                            const currentSrc = source.src.split('?')[0];
-                            source.src = `${currentSrc}?t=${Date.now()}&q=low&retry=${retryCount}`;
-                            video.load();
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        }
-                        return video.play();
-                    }
-                ];
-                
-                // Try current strategy
-                const currentStrategy = strategies[retryCount % strategies.length];
-                try {
-                    await currentStrategy();
-                    console.log(`Play successful with strategy ${retryCount + 1} for ${video.id}`);
-                } catch (error) {
-                    console.warn(`Play attempt ${retryCount + 1} failed:`, error);
-                    // Wait longer between retries
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await playWithTVFallback(retryCount + 1);
-                }
-            };
-            
-            // Start play attempts
-            await playWithTVFallback();
-        };
-        
-        // Set up more frequent health check for TV
-        setInterval(() => {
-            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-            if (activeVideo) {
-                if (activeVideo.paused || activeVideo.ended || activeVideo.error) {
-                    console.log('Video health check: video needs recovery on TV');
-                    forceReloadVideo(activeVideo);
-                }
-                
-                // More aggressive memory management for TV
-                const currentTime = activeVideo.currentTime;
-                const duration = activeVideo.duration;
-                if (duration > 0 && currentTime > duration * 0.7) {
-                    console.log('Video near end on TV, preparing for loop');
-                    forceReloadVideo(activeVideo);
-                }
-            }
-        }, 3000); // Check every 3 seconds on TV
-        
-        // Enhanced error recovery for TV
-        videos.forEach(video => {
-            // TV-specific event handlers
-            video.addEventListener('error', async (e) => {
-                console.error(`Error with video ${video.id} on TV:`, e);
-                const retryCount = parseInt(sessionStorage.getItem('video_retry_count')) || 0;
-                
-                if (retryCount < 5) {
-                    sessionStorage.setItem('video_retry_count', (retryCount + 1).toString());
-                    console.log(`Attempting recovery for ${video.id} (attempt ${retryCount + 1})`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await forceReloadVideo(video);
-                } else {
-                    console.error(`Max retries reached for ${video.id}, trying final recovery`);
-                    sessionStorage.setItem('video_retry_count', '0');
-                    video.style.display = 'none';
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    video.style.display = 'block';
-                    await forceReloadVideo(video);
-                }
-            });
-            
-            // Add TV-specific event handlers
-            video.addEventListener('loadeddata', () => {
-                console.log(`Video ${video.id} data loaded successfully on TV`);
-                sessionStorage.setItem('video_retry_count', '0');
-            });
-            
-            video.addEventListener('stalled', async () => {
-                console.log(`Video ${video.id} stalled on TV, attempting recovery`);
-                await forceReloadVideo(video);
-            });
-            
-            // Handle TV-specific visibility changes
-            video.addEventListener('webkitvisibilitychange', async () => {
-                if (!document.webkitHidden) {
-                    console.log('TV visibility restored - checking videos');
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await forceReloadVideo(video);
-                }
-            });
-        });
-        
-        // Add TV-specific visibility change handler
-        document.addEventListener('webkitvisibilitychange', async () => {
-            if (!document.webkitHidden) {
-                console.log('TV page visibility restored - checking videos');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-                if (activeVideo) {
-                    await forceReloadVideo(activeVideo);
-                }
-            }
-        });
-        
-        // Add TV-specific focus handler
-        window.addEventListener('focus', async () => {
-            console.log('TV page focused - checking videos');
-            const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-            if (activeVideo) {
-                await forceReloadVideo(activeVideo);
-            }
-        });
-        
-        // Apply TV-specific optimizations
-        document.body.classList.add('tizen-tv');
-        
-        // Add TV-specific CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            .tizen-tv .weather-video {
-                transform: translateZ(0);
-                backface-visibility: hidden;
-                perspective: 1000;
-                will-change: transform;
-                -webkit-transform: translateZ(0);
-                -webkit-backface-visibility: hidden;
-                -webkit-perspective: 1000;
-            }
-            .tizen-tv video {
-                object-fit: cover;
-                width: 100%;
-                height: 100%;
-                -webkit-object-fit: cover;
-            }
-            .tizen-tv .video-container {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: -1;
-                background: #000;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Common video setup for all devices
-    videos.forEach(video => {
-        // Set video attributes
-        video.setAttribute('autoplay', '');
-        video.setAttribute('loop', '');
-        video.setAttribute('preload', isTV ? 'auto' : 'metadata');
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.setAttribute('x-webkit-airplay', 'allow');
-        video.muted = true;
-        video.playbackRate = 0.5;
-        
-        // Add loading event handlers
-        video.addEventListener('loadstart', () => {
-            console.log(`Video ${video.id} started loading`);
-        });
-        
-        video.addEventListener('canplay', () => {
-            console.log(`Video ${video.id} can play`);
-            if (video.style.display === 'block') {
-                if (isTV) {
-                    forceReloadVideo(video).catch(e => console.warn(`TV play failed for ${video.id}:`, e));
-                } else {
-                    video.play().catch(e => console.warn(`Initial play failed for ${video.id}:`, e));
-                }
-            }
-        });
-    });
-    
-    // Global click handler for video recovery
-    document.addEventListener('click', async () => {
-        const activeVideo = document.querySelector('.weather-video[style*="display: block"]');
-        if (activeVideo) {
-            if (isTV) {
-                await forceReloadVideo(activeVideo);
-            } else {
-                activeVideo.play().catch(e => console.warn('Play after click failed:', e));
-            }
-        }
-    });
-}
-
-// Function to ensure video source is properly set
 async function ensureVideoSource(video, videoId) {
     const source = video.querySelector('source');
     if (!source) {
-        console.error(`No source element found for video ${videoId}`);
+        console.log(`No source element found for ${videoId}`);
         return false;
     }
 
     // Get the base video path
-    const basePath = `components/decorations/${videoId.replace('video-', '')}_daytime.mp4`;
+    const basePath = `components/decorations/${videoId}.mp4`;
+    console.log(`Loading video: ${basePath}`);
+    
+    // Set basic video attributes
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
     
     // Set the source with cache busting
     source.src = `${basePath}?t=${Date.now()}`;
@@ -2201,232 +1798,77 @@ async function ensureVideoSource(video, videoId) {
     
     return new Promise((resolve) => {
         const handleCanPlay = () => {
-            console.log(`Video ${videoId} can play after source update`);
+            console.log(`Video ${videoId} can play`);
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
             resolve(true);
         };
         
         const handleError = (e) => {
-            console.error(`Error loading video ${videoId}:`, e);
+            console.error(`Error loading ${videoId}:`, e);
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
             resolve(false);
         };
         
-        video.addEventListener('canplay', handleCanPlay, { once: true });
-        video.addEventListener('error', handleError, { once: true });
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('error', handleError);
         
-        // Set a timeout in case the video never loads
+        // Simple timeout
         setTimeout(() => {
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
-            console.warn(`Timeout waiting for video ${videoId} to load`);
+            console.log(`Timeout loading ${videoId}`);
             resolve(false);
         }, 10000);
     });
 }
 
-// Enhanced function to force reload a video
 async function forceReloadVideo(video) {
     if (!video) {
-        console.error('No video element provided to forceReloadVideo');
+        console.error('No video element provided');
         return false;
     }
 
-    console.log(`Force reloading video: ${video.id}`);
+    console.log(`Loading video: ${video.id}`);
     
     // Reset video state
     video.pause();
     video.currentTime = 0;
-    video.style.display = 'none';
     
-    // Ensure source is properly set
-    const sourceOk = await ensureVideoSource(video, video.id);
-    if (!sourceOk) {
-        console.error(`Failed to set source for video ${video.id}`);
+    // Set source and try to play
+    const success = await ensureVideoSource(video, video.id);
+    if (!success) {
         return false;
     }
     
-    // Set video attributes
-    video.setAttribute('x-webkit-airplay', 'allow');
-    video.setAttribute('webkit-playsinline', 'true');
-    video.setAttribute('playsinline', 'true');
-    video.setAttribute('muted', 'true');
-    video.setAttribute('autoplay', 'true');
-    video.setAttribute('loop', 'true');
-    video.setAttribute('preload', 'auto');
-    video.muted = true;
-    video.playbackRate = 0.5;
-    
-    // Make video visible
-    video.style.display = 'block';
-    
-    // Try to play with multiple strategies
-    const playStrategies = [
-        // Strategy 1: Direct play
-        async () => {
-            try {
-                await video.play();
-                return true;
-            } catch (e) {
-                console.warn('Direct play failed:', e);
-                return false;
-            }
-        },
-        // Strategy 2: Play with user interaction simulation
-        async () => {
-            try {
-                const clickEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window
-                });
-                document.body.dispatchEvent(clickEvent);
-                await new Promise(resolve => setTimeout(resolve, 100));
-                await video.play();
-                return true;
-            } catch (e) {
-                console.warn('Play with click simulation failed:', e);
-                return false;
-            }
-        },
-        // Strategy 3: Play with visibility toggle
-        async () => {
-            try {
-                document.body.style.visibility = 'hidden';
-                await new Promise(resolve => setTimeout(resolve, 100));
-                document.body.style.visibility = 'visible';
-                await video.play();
-                return true;
-            } catch (e) {
-                console.warn('Play with visibility toggle failed:', e);
-                return false;
-            }
-        },
-        // Strategy 4: Play with video reset
-        async () => {
-            try {
-                video.style.display = 'none';
-                await new Promise(resolve => setTimeout(resolve, 100));
-                video.style.display = 'block';
-                await video.play();
-                return true;
-            } catch (e) {
-                console.warn('Play with video reset failed:', e);
-                return false;
-            }
-        }
-    ];
-    
-    // Try each strategy in sequence
-    for (let i = 0; i < playStrategies.length; i++) {
-        console.log(`Trying play strategy ${i + 1} for ${video.id}`);
-        const success = await playStrategies[i]();
-        if (success) {
-            console.log(`Successfully played video ${video.id} with strategy ${i + 1}`);
-            return true;
-        }
-        // Wait before trying next strategy
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+        await video.play();
+        console.log(`Successfully playing ${video.id}`);
+        return true;
+    } catch (e) {
+        console.error(`Failed to play ${video.id}:`, e);
+        return false;
     }
-    
-    console.error(`All play strategies failed for video ${video.id}`);
-    return false;
 }
 
-// Modify setWeatherBackground to use enhanced video loading
+// Modify setWeatherBackground to be simpler
 async function setWeatherBackground(code) {
-    updateDebugOverlay(`Setting weather background for code: ${code}`);
-    
-    // First, remove all weather classes and reset background
-    document.body.classList.remove(
-        'weather-clear',
-        'weather-partly-cloudy',
-        'weather-cloudy',
-        'weather-rainy',
-        'weather-snowy',
-        'weather-foggy',
-        'weather-thunder'
-    );
-    
-    // Reset background to default cloudy color
-    document.body.style.backgroundColor = '#2c3e50'; // Default cloudy background
-    
-    // Remove night class if it's day time
-    const hour = new Date().getHours();
-    const isNight = hour < 6 || hour >= 19;
-    document.body.classList.toggle('night', isNight);
-    
-    // Remove any existing weather effects
-    const existingEffect = document.querySelector('.weather-effect');
-    if (existingEffect) {
-        existingEffect.remove();
-    }
-    
-    // Add appropriate weather class
-    let weatherClass = '';
+    // Get the video ID for this weather code
     const videoId = getVideoIdForWeatherCode(code);
+    console.log(`Setting weather background for code ${code} -> video ${videoId}`);
     
-    // Set weather class and background color based on code
-    if (code >= 0 && code <= 1) {
-        weatherClass = 'weather-clear';
-        document.body.style.backgroundColor = '#87CEEB'; // Sky blue for clear
-    } else if (code === 2) {
-        weatherClass = 'weather-partly-cloudy';
-        document.body.style.backgroundColor = '#B0C4DE'; // Light steel blue for partly cloudy
-    } else if (code === 3) {
-        weatherClass = 'weather-cloudy';
-        document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for cloudy
-    } else if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) {
-        weatherClass = 'weather-rainy';
-        document.body.style.backgroundColor = '#34495e'; // Darker blue for rain
-    } else if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
-        weatherClass = 'weather-snowy';
-        document.body.style.backgroundColor = '#7f8c8d'; // Gray for snow
-    } else if (code === 45 || code === 48) {
-        weatherClass = 'weather-foggy';
-        document.body.style.backgroundColor = '#95a5a6'; // Light gray for fog
-    } else if (code >= 95) {
-        weatherClass = 'weather-thunder';
-        document.body.style.backgroundColor = '#2c3e50'; // Dark blue-gray for thunder
-    } else {
-        weatherClass = 'weather-clear';
-        document.body.style.backgroundColor = '#87CEEB'; // Default to sky blue
-    }
-    
-    // Add the weather class
-    document.body.classList.add(weatherClass);
-    
-    // Handle video background if we have a valid video ID
-    if (videoId) {
-        // Hide all videos first
-        document.querySelectorAll('.weather-video').forEach(video => {
-            video.style.display = 'none';
-            video.pause();
-        });
+    // Hide all videos first
+    document.querySelectorAll('.weather-video').forEach(video => {
+        video.style.display = 'none';
+        video.pause();
+    });
 
-        // Get and handle the active video
-        const videoElement = document.getElementById(videoId);
-        if (videoElement) {
-            updateDebugOverlay(`Attempting to load video: ${videoId}`);
-            try {
-                // Set the video source directly
-                const videoPath = `components/decorations/${videoId}.mp4`;
-                videoElement.src = `${videoPath}?t=${Date.now()}`; // Add cache busting
-                videoElement.load();
-                
-                // Try to play the video
-                const success = await forceReloadVideo(videoElement);
-                if (!success) {
-                    updateDebugOverlay(`Failed to load video ${videoId}`, true);
-                }
-            } catch (error) {
-                updateDebugOverlay(`Error loading video ${videoId}: ${error.message}`, true);
-            }
-        } else {
-            updateDebugOverlay(`Video element ${videoId} not found`, true);
-        }
+    // Get and handle the active video
+    const videoElement = document.getElementById(videoId);
+    if (videoElement) {
+        videoElement.style.display = 'block';
+        await forceReloadVideo(videoElement);
     }
 }
 
@@ -2562,43 +2004,102 @@ async function ensureVideoSource(video, videoId) {
 
     updateDebugOverlay(`Loading video: ${videoId}`);
     
-    // Get the base video path
-    const basePath = `components/decorations/${videoId.replace('video-', '')}_daytime.mp4`;
+    // Get the base video path - use videoId directly since it already includes the correct suffix
+    const basePath = `components/decorations/${videoId}.mp4`;
     updateDebugOverlay(`Video path: ${basePath}`);
     
-    // Set the source with cache busting
-    source.src = `${basePath}?t=${Date.now()}`;
-    video.load();
+    // Set video attributes for better loading
+    video.setAttribute('preload', 'auto');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.muted = true;
+    video.playbackRate = 0.5;
+    
+    // Set the source with cache busting and range request support
+    const timestamp = Date.now();
+    source.src = `${basePath}?t=${timestamp}`;
     
     return new Promise((resolve) => {
-        const handleCanPlay = () => {
-            updateDebugOverlay(`Video ${videoId} can play`);
+        // Add event listeners before loading
+        let loadTimeout;
+        let hasStartedLoading = false;
+        let hasLoadedMetadata = false;
+        
+        const cleanup = () => {
+            clearTimeout(loadTimeout);
+            video.removeEventListener('loadstart', handleLoadStart);
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
+            video.removeEventListener('stalled', handleStalled);
+        };
+        
+        const handleLoadStart = () => {
+            hasStartedLoading = true;
+            updateDebugOverlay(`Video ${videoId} started loading`);
+        };
+        
+        const handleLoadedMetadata = () => {
+            hasLoadedMetadata = true;
+            updateDebugOverlay(`Video ${videoId} metadata loaded`);
+        };
+        
+        const handleCanPlay = () => {
+            updateDebugOverlay(`Video ${videoId} can play`);
+            cleanup();
             resolve(true);
         };
         
         const handleError = (e) => {
             updateDebugOverlay(`Error loading ${videoId}: ${e.target.error?.message || 'Unknown error'}`, true);
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
+            cleanup();
             resolve(false);
         };
         
-        video.addEventListener('canplay', handleCanPlay, { once: true });
-        video.addEventListener('error', handleError, { once: true });
+        const handleStalled = () => {
+            updateDebugOverlay(`Video ${videoId} stalled, attempting recovery`, true);
+            // Try to recover by reloading the source
+            const currentTime = video.currentTime;
+            video.load();
+            if (currentTime > 0) {
+                video.currentTime = currentTime;
+            }
+        };
         
-        // Set a timeout in case the video never loads
-        setTimeout(() => {
-            video.removeEventListener('canplay', handleCanPlay);
-            video.removeEventListener('error', handleError);
-            updateDebugOverlay(`Timeout loading ${videoId}`, true);
-            resolve(false);
-        }, 10000);
+        // Add event listeners
+        video.addEventListener('loadstart', handleLoadStart);
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('error', handleError);
+        video.addEventListener('stalled', handleStalled);
+        
+        // Start loading the video
+        video.load();
+        
+        // Set a more generous timeout for initial load
+        loadTimeout = setTimeout(() => {
+            if (!hasStartedLoading) {
+                updateDebugOverlay(`Timeout waiting for ${videoId} to start loading`, true);
+                cleanup();
+                resolve(false);
+            } else if (!hasLoadedMetadata) {
+                updateDebugOverlay(`Timeout waiting for ${videoId} metadata`, true);
+                cleanup();
+                resolve(false);
+            } else {
+                // If we have metadata but no canplay, try to force play
+                updateDebugOverlay(`Attempting to force play ${videoId} after timeout`);
+                video.play().catch(e => {
+                    updateDebugOverlay(`Force play failed: ${e.message}`, true);
+                    cleanup();
+                    resolve(false);
+                });
+            }
+        }, 15000); // Increased timeout to 15 seconds
     });
 }
 
-// Modify forceReloadVideo to use visual debug
+// Modify forceReloadVideo to handle partial content better
 async function forceReloadVideo(video) {
     if (!video) {
         updateDebugOverlay('No video element provided', true);
@@ -2619,27 +2120,20 @@ async function forceReloadVideo(video) {
         return false;
     }
     
-    // Set video attributes
-    video.setAttribute('x-webkit-airplay', 'allow');
-    video.setAttribute('webkit-playsinline', 'true');
-    video.setAttribute('playsinline', 'true');
-    video.setAttribute('muted', 'true');
-    video.setAttribute('autoplay', 'true');
-    video.setAttribute('loop', 'true');
-    video.setAttribute('preload', 'auto');
-    video.muted = true;
-    video.playbackRate = 0.5;
-    
     // Make video visible
     video.style.display = 'block';
     
     // Try to play with multiple strategies
     const playStrategies = [
         {
-            name: 'Direct play',
+            name: 'Direct play with timeout',
             fn: async () => {
                 try {
-                    await video.play();
+                    const playPromise = video.play();
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Play timeout')), 5000)
+                    );
+                    await Promise.race([playPromise, timeoutPromise]);
                     return true;
                 } catch (e) {
                     updateDebugOverlay(`Direct play failed: ${e.message}`, true);
@@ -2648,16 +2142,17 @@ async function forceReloadVideo(video) {
             }
         },
         {
-            name: 'Click simulation',
+            name: 'Click simulation with delay',
             fn: async () => {
                 try {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     const clickEvent = new MouseEvent('click', {
                         bubbles: true,
                         cancelable: true,
                         view: window
                     });
                     document.body.dispatchEvent(clickEvent);
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     await video.play();
                     return true;
                 } catch (e) {
@@ -2667,12 +2162,14 @@ async function forceReloadVideo(video) {
             }
         },
         {
-            name: 'Visibility toggle',
+            name: 'Visibility toggle with reload',
             fn: async () => {
                 try {
                     document.body.style.visibility = 'hidden';
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    video.load();
                     document.body.style.visibility = 'visible';
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     await video.play();
                     return true;
                 } catch (e) {
@@ -2682,12 +2179,18 @@ async function forceReloadVideo(video) {
             }
         },
         {
-            name: 'Video reset',
+            name: 'Full video reset',
             fn: async () => {
                 try {
+                    const currentSrc = video.src;
                     video.style.display = 'none';
+                    video.removeAttribute('src');
+                    video.load();
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    video.src = currentSrc;
+                    video.load();
                     video.style.display = 'block';
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     await video.play();
                     return true;
                 } catch (e) {
@@ -2698,7 +2201,7 @@ async function forceReloadVideo(video) {
         }
     ];
     
-    // Try each strategy in sequence
+    // Try each strategy in sequence with longer delays
     for (let i = 0; i < playStrategies.length; i++) {
         const strategy = playStrategies[i];
         updateDebugOverlay(`Trying strategy ${i + 1}: ${strategy.name}`);
@@ -2707,7 +2210,8 @@ async function forceReloadVideo(video) {
             updateDebugOverlay(`Success with strategy ${i + 1}: ${strategy.name}`);
             return true;
         }
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Longer delay between strategies
+        await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
     updateDebugOverlay(`All play strategies failed for ${video.id}`, true);
@@ -2723,3 +2227,71 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Rest of initialization code...
 });
+
+// Simple video initialization
+function initializeVideos() {
+    console.log('Initializing videos');
+    
+    // Get all videos
+    const videos = document.querySelectorAll('.weather-video');
+    
+    // Set basic attributes for all videos
+    videos.forEach(video => {
+        // Basic attributes
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.setAttribute('preload', 'auto');
+        
+        // Hide all videos initially
+        video.style.display = 'none';
+        
+        // Add basic error handling
+        video.addEventListener('error', (e) => {
+            console.error(`Error with video ${video.id}:`, e);
+        });
+    });
+}
+
+// Simplified setWeatherBackground function
+async function setWeatherBackground(code) {
+    // Get the video ID for this weather code
+    const videoId = getVideoIdForWeatherCode(code);
+    console.log(`Setting weather background for code ${code} -> video ${videoId}`);
+    
+    // Hide all videos first
+    document.querySelectorAll('.weather-video').forEach(video => {
+        video.style.display = 'none';
+        video.pause();
+    });
+
+    // Get and handle the active video
+    const videoElement = document.getElementById(videoId);
+    if (!videoElement) {
+        console.error(`Video element not found: ${videoId}`);
+        return;
+    }
+
+    try {
+        // Show the video
+        videoElement.style.display = 'block';
+        
+        // Get or create source element
+        let source = videoElement.querySelector('source');
+        if (!source) {
+            source = document.createElement('source');
+            videoElement.appendChild(source);
+        }
+        
+        // Set the source
+        const basePath = `components/decorations/${videoId}.mp4`;
+        source.src = `${basePath}?t=${Date.now()}`;
+        
+        // Load and play
+        videoElement.load();
+        await videoElement.play();
+        console.log(`Successfully playing ${videoId}`);
+    } catch (e) {
+        console.error(`Failed to play ${videoId}:`, e);
+    }
+}

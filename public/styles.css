@@ -1097,7 +1097,7 @@ body {
     z-index: -1;
     pointer-events: none;
     background: transparent;
-    overflow: hidden; /* Prevent video overflow */
+    overflow: hidden;
 }
 
 /* Video background for weather conditions - TV optimized */
@@ -1108,14 +1108,16 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0;
-    transition: opacity 1.5s ease;
+    opacity: 0.9;
+    transition: opacity 0.5s ease;
     pointer-events: none;
-    transform: translateZ(0); /* Hardware acceleration for better performance */
-    will-change: opacity; /* Hint for browser optimization */
-    display: none; /* Initially hidden, will be made visible in JS */
-    z-index: -1; /* Ensure videos don't overlap UI elements */
+    transform: translateZ(0);
+    will-change: opacity;
+    display: none;
+    z-index: -1;
 }
+
+/* Remove all the complex visibility classes since we handle display in JavaScript */
 
 /* Video background visibility classes for each weather condition */
 body.weather-clear #video-clearsky {
