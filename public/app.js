@@ -1257,7 +1257,7 @@ function setWeatherIcon(code) {
     const iconCanvas = document.getElementById('current-icon');
     if (!iconCanvas) return;
     
-    // Set weather code in body dataset for cloud decorations
+    // Set weather code in body dataset
     setCurrentWeatherCode(code);
     
     // Determine if it's nighttime to show the night icon variant
@@ -1296,14 +1296,10 @@ function setWeatherIcon(code) {
     
     // Performance optimization for TV: pause Skycons before changing
     if (devicePerformanceScore <= 3) {
-        // First pause to reduce workload during icon change
         try {
             skycons.default.pause();
-            
-            // Reduce CPU impact by cleaning up first
             skycons.default.remove('current-icon');
             
-            // For low-performance devices, set a simplified rendering option
             if (iconCanvas.getContext) {
                 const ctx = iconCanvas.getContext('2d');
                 if (ctx) {
@@ -1312,19 +1308,14 @@ function setWeatherIcon(code) {
                 }
             }
             
-            // Add the new icon with optimized settings
             skycons.default.add('current-icon', iconType);
-            
-            // Resume animation after a short delay to let the browser catch up
             setTimeout(() => skycons.default.play(), 100);
         } catch (e) {
             console.warn("Error during icon optimization:", e);
-            // Fallback: use standard approach
             skycons.default.remove('current-icon');
             skycons.default.add('current-icon', iconType);
         }
     } else {
-        // For higher performance devices, use standard approach
         skycons.default.remove('current-icon');
         skycons.default.add('current-icon', iconType);
     }
@@ -1332,7 +1323,6 @@ function setWeatherIcon(code) {
     // Update the weather background
     setWeatherBackground(code);
     
-    // Return the icon type for reference
     return iconType;
 }
 
@@ -1723,17 +1713,9 @@ function getForecastIconClass(code, desc) {
     return 'fa-solid fa-cloud';
 } 
 
-// Set current weather code in body dataset for re-application
+// Remove setCurrentWeatherCode function and replace with a simpler version
 function setCurrentWeatherCode(code) {
     document.body.dataset.currentWeatherCode = code;
-    
-    // Force cloud decorations to check and initialize after a short delay
-    setTimeout(() => {
-        if (window.cloudDecorations && typeof window.cloudDecorations.check === 'function') {
-            console.log('Forcing cloud decorations check after weather code set');
-            window.cloudDecorations.check();
-        }
-    }, 500);
 }
 
 // Add this function to detect the Lunixo app
