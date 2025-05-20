@@ -1783,49 +1783,36 @@ async function ensureVideoSource(video, videoId) {
         return false;
     }
 
-    console.log(`Loading video: ${videoId}`);
-    
     // Get the base video path
     const basePath = `components/decorations/${videoId}.mp4`;
-    console.log(`Video path: ${basePath}`);
     
-    // Set video attributes for better loading
-    video.setAttribute('preload', 'auto');
+    // Set performance-focused attributes
+    video.setAttribute('preload', 'metadata');
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.muted = true;
-    video.playbackRate = 0.5;
+    video.playbackRate = 0.75;
     
-    // Set the source with cache busting
-    const timestamp = Date.now();
-    source.src = `${basePath}?t=${timestamp}`;
+    // Set source with cache busting
+    source.src = `${basePath}?t=${Date.now()}`;
     
     return new Promise((resolve) => {
         let loadTimeout;
         let hasStartedLoading = false;
-        let hasLoadedMetadata = false;
         
         const cleanup = () => {
             clearTimeout(loadTimeout);
-            video.removeEventListener('loadstart', handleLoadStart);
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('error', handleError);
-            video.removeEventListener('stalled', handleStalled);
-        };
-        
-        const handleLoadStart = () => {
-            hasStartedLoading = true;
-            console.log(`Video ${videoId} started loading`);
         };
         
         const handleLoadedMetadata = () => {
-            hasLoadedMetadata = true;
-            console.log(`Video ${videoId} metadata loaded`);
+            // Start loading the video data after metadata is loaded
+            video.load();
         };
         
         const handleCanPlay = () => {
-            console.log(`Video ${videoId} can play`);
             cleanup();
             resolve(true);
         };
@@ -1836,41 +1823,21 @@ async function ensureVideoSource(video, videoId) {
             resolve(false);
         };
         
-        const handleStalled = () => {
-            console.log(`Video ${videoId} stalled, attempting recovery`);
-            const currentTime = video.currentTime;
-            video.load();
-            if (currentTime > 0) {
-                video.currentTime = currentTime;
-            }
-        };
-        
-        video.addEventListener('loadstart', handleLoadStart);
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
         video.addEventListener('canplay', handleCanPlay);
         video.addEventListener('error', handleError);
-        video.addEventListener('stalled', handleStalled);
         
+        // Load metadata first
         video.load();
         
+        // Timeout for metadata loading
         loadTimeout = setTimeout(() => {
             if (!hasStartedLoading) {
-                console.log(`Timeout waiting for ${videoId} to start loading`);
+                console.log(`Timeout loading metadata for ${videoId}`);
                 cleanup();
                 resolve(false);
-            } else if (!hasLoadedMetadata) {
-                console.log(`Timeout waiting for ${videoId} metadata`);
-                cleanup();
-                resolve(false);
-            } else {
-                console.log(`Attempting to force play ${videoId} after timeout`);
-                video.play().catch(e => {
-                    console.error(`Force play failed:`, e);
-                    cleanup();
-                    resolve(false);
-                });
             }
-        }, 15000);
+        }, 5000);
     });
 }
 
@@ -1879,24 +1846,25 @@ async function forceReloadVideo(video) {
         console.error('No video element provided');
         return false;
     }
-
-    console.log(`Reloading video: ${video.id}`);
     
+    // Reset video state
     video.pause();
     video.currentTime = 0;
     video.style.display = 'none';
     
+    // Ensure source is set
     const sourceOk = await ensureVideoSource(video, video.id);
     if (!sourceOk) {
-        console.error(`Failed to set source for ${video.id}`);
         return false;
     }
     
+    // Show video and play
     video.style.display = 'block';
     
     try {
+        // Wait a short moment before playing
+        await new Promise(resolve => setTimeout(resolve, 100));
         await video.play();
-        console.log(`Successfully playing ${video.id}`);
         return true;
     } catch (e) {
         console.error(`Failed to play ${video.id}:`, e);
@@ -2000,29 +1968,131 @@ document.addEventListener('DOMContentLoaded', () => {
     // Rest of initialization code...
 });
 
-// Simple video initialization
+// Modify initializeVideos to add performance optimizations
 function initializeVideos() {
-    console.log('Initializing videos');
+    console.log('Initializing videos with performance optimizations');
     
-    // Get all videos
     const videos = document.querySelectorAll('.weather-video');
     
-    // Set basic attributes for all videos
     videos.forEach(video => {
-        // Basic attributes
+        // Performance-focused attributes
         video.muted = true;
         video.loop = true;
         video.playsInline = true;
-        video.setAttribute('preload', 'auto');
+        video.preload = 'metadata'; // Only load metadata initially
+        video.playbackRate = 0.75; // Slightly slower playback for smoother performance
         
-        // Hide all videos initially
+        // Hardware acceleration hints
+        video.style.transform = 'translateZ(0)';
+        video.style.backfaceVisibility = 'hidden';
+        video.style.perspective = '1000px';
+        
+        // Hide initially
         video.style.display = 'none';
         
-        // Add basic error handling
+        // Add error handling
         video.addEventListener('error', (e) => {
             console.error(`Error with video ${video.id}:`, e);
         });
     });
+}
+
+// Modify ensureVideoSource for better performance
+async function ensureVideoSource(video, videoId) {
+    const source = video.querySelector('source');
+    if (!source) {
+        console.log(`No source element found for ${videoId}`);
+        return false;
+    }
+
+    // Get the base video path
+    const basePath = `components/decorations/${videoId}.mp4`;
+    
+    // Set performance-focused attributes
+    video.setAttribute('preload', 'metadata');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.muted = true;
+    video.playbackRate = 0.75;
+    
+    // Set source with cache busting
+    source.src = `${basePath}?t=${Date.now()}`;
+    
+    return new Promise((resolve) => {
+        let loadTimeout;
+        let hasStartedLoading = false;
+        
+        const cleanup = () => {
+            clearTimeout(loadTimeout);
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+        };
+        
+        const handleLoadedMetadata = () => {
+            // Start loading the video data after metadata is loaded
+            video.load();
+        };
+        
+        const handleCanPlay = () => {
+            cleanup();
+            resolve(true);
+        };
+        
+        const handleError = (e) => {
+            console.error(`Error loading ${videoId}:`, e.target.error?.message || 'Unknown error');
+            cleanup();
+            resolve(false);
+        };
+        
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('error', handleError);
+        
+        // Load metadata first
+        video.load();
+        
+        // Timeout for metadata loading
+        loadTimeout = setTimeout(() => {
+            if (!hasStartedLoading) {
+                console.log(`Timeout loading metadata for ${videoId}`);
+                cleanup();
+                resolve(false);
+            }
+        }, 5000);
+    });
+}
+
+// Modify forceReloadVideo for smoother playback
+async function forceReloadVideo(video) {
+    if (!video) {
+        console.error('No video element provided');
+        return false;
+    }
+    
+    // Reset video state
+    video.pause();
+    video.currentTime = 0;
+    video.style.display = 'none';
+    
+    // Ensure source is set
+    const sourceOk = await ensureVideoSource(video, video.id);
+    if (!sourceOk) {
+        return false;
+    }
+    
+    // Show video and play
+    video.style.display = 'block';
+    
+    try {
+        // Wait a short moment before playing
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await video.play();
+        return true;
+    } catch (e) {
+        console.error(`Failed to play ${video.id}:`, e);
+        return false;
+    }
 }
 
 // Simplified setWeatherBackground function
