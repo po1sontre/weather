@@ -12,8 +12,20 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/ads",
+      "dest": "/api/ads.js"
+    },
+    {
+      "src": "/api/upload-ad",
+      "dest": "/api/ads.js"
+    },
+    {
+      "src": "/api/delete-ad/(?<id>[^/]+)",
+      "dest": "/api/delete-ad/[id].js"
+    },
+    {
+      "src": "/api/stats",
+      "dest": "/api/stats.js"
     },
     {
       "src": "/admin",
