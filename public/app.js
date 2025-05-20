@@ -1761,13 +1761,75 @@ function getTizenTVModel() {
 
 // Function to get video ID for weather code
 function getVideoIdForWeatherCode(code) {
-    if (code >= 0 && code <= 1) return 'video-clearsky';
-    if (code === 2) return 'video-partly-cloudy';
-    if (code === 3) return 'video-cloudy';
-    if ((code >= 51 && code <= 65) || (code >= 80 && code <= 82)) return 'video-rain';
-    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'video-snow';
-    if (code >= 95) return 'video-thunder';
-    return 'video-clearsky'; // default
+    const videoMap = {
+        0: 'clearsky_daytime',      // Clear sky
+        1: 'partly_cloudy_daytime', // Partly cloudy
+        2: 'partly_cloudy_daytime', // Partly cloudy
+        3: 'cloudy_daytime',        // Cloudy
+        45: 'cloudy_daytime',       // Foggy
+        48: 'cloudy_daytime',       // Depositing rime fog
+        51: 'rain_daytime',         // Light drizzle
+        53: 'rain_daytime',         // Moderate drizzle
+        55: 'rain_daytime',         // Dense drizzle
+        61: 'rain_daytime',         // Slight rain
+        63: 'rain_daytime',         // Moderate rain
+        65: 'rain_daytime',         // Heavy rain
+        71: 'snow_daytime_night',   // Slight snow
+        73: 'snow_daytime_night',   // Moderate snow
+        75: 'snow_daytime_night',   // Heavy snow
+        77: 'snow_daytime_night',   // Snow grains
+        80: 'rain_daytime',         // Slight rain showers
+        81: 'rain_daytime',         // Moderate rain showers
+        82: 'rain_daytime',         // Violent rain showers
+        85: 'snow_daytime_night',   // Slight snow showers
+        86: 'snow_daytime_night',   // Heavy snow showers
+        95: 'rain_thunderstorm_night_day', // Thunderstorm
+        96: 'rain_thunderstorm_night_day', // Thunderstorm with slight hail
+        99: 'rain_thunderstorm_night_day'  // Thunderstorm with heavy hail
+    };
+    return videoMap[code] || null;
+}
+
+function ensureVideoSource(video, videoId) {
+    return new Promise((resolve, reject) => {
+        try {
+            const videoPath = `components/decorations/${videoId}.mp4`;
+            updateDebugOverlay(`Setting video source: ${videoPath}`, 'info');
+            
+            // Set the source with cache busting
+            const timestamp = new Date().getTime();
+            video.src = `${videoPath}?t=${timestamp}`;
+            
+            // Verify the video can play
+            const canPlayPromise = new Promise((resolveCanPlay) => {
+                const timeout = setTimeout(() => {
+                    updateDebugOverlay(`Timeout waiting for video to be playable: ${videoId}`, 'error');
+                    resolveCanPlay(false);
+                }, 10000);
+
+                const canPlayHandler = () => {
+                    clearTimeout(timeout);
+                    video.removeEventListener('canplay', canPlayHandler);
+                    resolveCanPlay(true);
+                };
+
+                video.addEventListener('canplay', canPlayHandler);
+            });
+
+            canPlayPromise.then(canPlay => {
+                if (canPlay) {
+                    updateDebugOverlay(`Video source set and can play: ${videoId}`, 'success');
+                    resolve(true);
+                } else {
+                    updateDebugOverlay(`Video cannot play: ${videoId}`, 'error');
+                    reject(new Error(`Video cannot play: ${videoId}`));
+                }
+            });
+        } catch (error) {
+            updateDebugOverlay(`Error setting video source: ${error.message}`, 'error');
+            reject(error);
+        }
+    });
 }
 
 // Function to preload a specific video for TV

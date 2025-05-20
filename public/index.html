@@ -20,36 +20,24 @@
     
     <!-- TV-Friendly Video backgrounds for different weather conditions -->
     <!-- Each video is now hidden by default and lazily loaded -->
-    <div id="video-container">
+    <div id="video-container" class="video-container">
         <!-- Clear sky video -->
-        <video id="video-clearsky" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/clearsky_daytime.mp4" type="video/mp4">
-        </video>
+        <video id="clearsky_daytime" class="weather-video" muted playsinline autoplay loop></video>
         
         <!-- Partly cloudy video -->
-        <video id="video-partly-cloudy" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/partly_cloudy_daytime.mp4" type="video/mp4">
-        </video>
+        <video id="partly_cloudy_daytime" class="weather-video" muted playsinline autoplay loop></video>
         
         <!-- Cloudy video -->
-        <video id="video-cloudy" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/cloudy_daytime.mp4" type="video/mp4">
-        </video>
+        <video id="cloudy_daytime" class="weather-video" muted playsinline autoplay loop></video>
         
         <!-- Rain video -->
-        <video id="video-rain" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/rain_daytime.mp4" type="video/mp4">
-        </video>
+        <video id="rain_daytime" class="weather-video" muted playsinline autoplay loop></video>
         
         <!-- Snow video -->
-        <video id="video-snow" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/snow_daytime_night.mp4" type="video/mp4">
-        </video>
+        <video id="snow_daytime_night" class="weather-video" muted playsinline autoplay loop></video>
         
         <!-- Thunderstorm video -->
-        <video id="video-thunder" class="weather-video" muted playsinline autoplay loop style="playbackRate: 0.5;">
-            <source src="components/decorations/rain_thunderstorm_night_day.mp4" type="video/mp4">
-        </video>
+        <video id="rain_thunderstorm_night_day" class="weather-video" muted playsinline autoplay loop></video>
     </div>
     
     <!-- Cloud decorations container -->
