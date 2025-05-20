@@ -2140,7 +2140,158 @@ async function initializeVideos() {
     });
 }
 
-// Modify setWeatherBackground to handle video loading
+// Function to ensure video source is properly set
+async function ensureVideoSource(video, videoId) {
+    const source = video.querySelector('source');
+    if (!source) {
+        console.error(`No source element found for video ${videoId}`);
+        return false;
+    }
+
+    // Get the base video path
+    const basePath = `components/decorations/${videoId.replace('video-', '')}_daytime.mp4`;
+    
+    // Set the source with cache busting
+    source.src = `${basePath}?t=${Date.now()}`;
+    video.load();
+    
+    return new Promise((resolve) => {
+        const handleCanPlay = () => {
+            console.log(`Video ${videoId} can play after source update`);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            resolve(true);
+        };
+        
+        const handleError = (e) => {
+            console.error(`Error loading video ${videoId}:`, e);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            resolve(false);
+        };
+        
+        video.addEventListener('canplay', handleCanPlay, { once: true });
+        video.addEventListener('error', handleError, { once: true });
+        
+        // Set a timeout in case the video never loads
+        setTimeout(() => {
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            console.warn(`Timeout waiting for video ${videoId} to load`);
+            resolve(false);
+        }, 10000);
+    });
+}
+
+// Enhanced function to force reload a video
+async function forceReloadVideo(video) {
+    if (!video) {
+        console.error('No video element provided to forceReloadVideo');
+        return false;
+    }
+
+    console.log(`Force reloading video: ${video.id}`);
+    
+    // Reset video state
+    video.pause();
+    video.currentTime = 0;
+    video.style.display = 'none';
+    
+    // Ensure source is properly set
+    const sourceOk = await ensureVideoSource(video, video.id);
+    if (!sourceOk) {
+        console.error(`Failed to set source for video ${video.id}`);
+        return false;
+    }
+    
+    // Set video attributes
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('muted', 'true');
+    video.setAttribute('autoplay', 'true');
+    video.setAttribute('loop', 'true');
+    video.setAttribute('preload', 'auto');
+    video.muted = true;
+    video.playbackRate = 0.5;
+    
+    // Make video visible
+    video.style.display = 'block';
+    
+    // Try to play with multiple strategies
+    const playStrategies = [
+        // Strategy 1: Direct play
+        async () => {
+            try {
+                await video.play();
+                return true;
+            } catch (e) {
+                console.warn('Direct play failed:', e);
+                return false;
+            }
+        },
+        // Strategy 2: Play with user interaction simulation
+        async () => {
+            try {
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                document.body.dispatchEvent(clickEvent);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await video.play();
+                return true;
+            } catch (e) {
+                console.warn('Play with click simulation failed:', e);
+                return false;
+            }
+        },
+        // Strategy 3: Play with visibility toggle
+        async () => {
+            try {
+                document.body.style.visibility = 'hidden';
+                await new Promise(resolve => setTimeout(resolve, 100));
+                document.body.style.visibility = 'visible';
+                await video.play();
+                return true;
+            } catch (e) {
+                console.warn('Play with visibility toggle failed:', e);
+                return false;
+            }
+        },
+        // Strategy 4: Play with video reset
+        async () => {
+            try {
+                video.style.display = 'none';
+                await new Promise(resolve => setTimeout(resolve, 100));
+                video.style.display = 'block';
+                await video.play();
+                return true;
+            } catch (e) {
+                console.warn('Play with video reset failed:', e);
+                return false;
+            }
+        }
+    ];
+    
+    // Try each strategy in sequence
+    for (let i = 0; i < playStrategies.length; i++) {
+        console.log(`Trying play strategy ${i + 1} for ${video.id}`);
+        const success = await playStrategies[i]();
+        if (success) {
+            console.log(`Successfully played video ${video.id} with strategy ${i + 1}`);
+            return true;
+        }
+        // Wait before trying next strategy
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    console.error(`All play strategies failed for video ${video.id}`);
+    return false;
+}
+
+// Modify setWeatherBackground to use enhanced video loading
 async function setWeatherBackground(code) {
     console.log(`Setting weather background for code: ${code}`);
     
@@ -2198,12 +2349,13 @@ async function setWeatherBackground(code) {
     // Add the weather class
     document.body.classList.add(weatherClass);
     
-    // Handle all video backgrounds for better TV compatibility
+    // Handle all video backgrounds
     const allVideos = document.querySelectorAll('.weather-video');
     if (allVideos.length > 0) {
         // First hide all videos
         allVideos.forEach(video => {
             video.style.display = 'none';
+            video.pause();
         });
         
         // Remove cloud decorations when using video background
@@ -2214,126 +2366,50 @@ async function setWeatherBackground(code) {
                 cloudContainer.style.display = 'none';
             }
             
-            // Unload unnecessary videos
-            unloadUnnecessaryVideos(activeVideoId);
-            
-            // Handle the active video with enhanced TV support
+            // Handle the active video
             const activeVideo = document.getElementById(activeVideoId);
             if (activeVideo) {
-                // Make the active video visible
-                activeVideo.style.display = 'block';
+                console.log(`Attempting to load and play video: ${activeVideoId}`);
                 
-                // For videos that have day/night sections
-                if (activeVideoId === 'video-snow' || activeVideoId === 'video-thunder') {
-                    const setupVideo = async () => {
-                        const duration = activeVideo.duration;
-                        if (isNight) {
-                            activeVideo.currentTime = (duration / 2) + (duration / 6);
-                        } else {
-                            activeVideo.currentTime = duration / 6;
-                        }
-                        
-                        // Enhanced play attempt with retry
-                        if (isTizenTV()) {
-                            await forceReloadVideo(activeVideo);
-                        } else {
-                            const playWithRetry = async (retryCount = 0) => {
-                                if (retryCount >= 3) return;
-                                
-                                try {
-                                    await activeVideo.play();
-                                } catch (error) {
-                                    console.warn(`Play attempt ${retryCount + 1} failed:`, error);
-                                    await new Promise(resolve => setTimeout(resolve, 1000));
-                                    await playWithRetry(retryCount + 1);
-                                }
-                            };
-                            
-                            await playWithRetry();
-                        }
-                    };
-                    
-                    if (activeVideo.readyState >= 1) {
-                        await setupVideo();
-                    } else {
-                        activeVideo.addEventListener('loadedmetadata', setupVideo, { once: true });
-                    }
-                } else {
-                    // For standard videos
-                    if (isTizenTV()) {
-                        await forceReloadVideo(activeVideo);
-                    } else {
-                        const playWithRetry = async (retryCount = 0) => {
-                            if (retryCount >= 3) return;
-                            
-                            try {
-                                await activeVideo.play();
-                            } catch (error) {
-                                console.warn(`Play attempt ${retryCount + 1} failed:`, error);
-                                await new Promise(resolve => setTimeout(resolve, 1000));
-                                await playWithRetry(retryCount + 1);
-                            }
-                        };
-                        
-                        await playWithRetry();
+                // Try to load and play the video
+                const success = await forceReloadVideo(activeVideo);
+                
+                if (!success) {
+                    console.error(`Failed to load video ${activeVideoId}, falling back to cloud decorations`);
+                    // Fallback to cloud decorations if video fails
+                    useVideoBackground = false;
+                    const cloudContainer = document.getElementById('cloud-decorations-container');
+                    if (cloudContainer) {
+                        cloudContainer.style.display = '';
                     }
                 }
+            } else {
+                console.error(`Video element ${activeVideoId} not found`);
+                useVideoBackground = false;
             }
-        } else {
-            // Re-show cloud container for non-video weather conditions
+        }
+        
+        // Handle non-video weather conditions or fallback
+        if (!useVideoBackground) {
+            // Re-show cloud container
             const cloudContainer = document.getElementById('cloud-decorations-container');
             if (cloudContainer) {
-                cloudContainer.style.display = ''; // Reset to default display
+                cloudContainer.style.display = '';
             }
             
-            // Add weather effect if needed and not using video background
+            // Add weather effect if needed
             if (weatherEffect && devicePerformanceScore > 2) {
                 const effectDiv = document.createElement('div');
                 effectDiv.className = `weather-effect ${weatherEffect}`;
                 document.body.appendChild(effectDiv);
             }
             
-            // Trigger cloud decorations update if available
+            // Trigger cloud decorations
             if (window.cloudDecorations) {
-                // Wait a short moment for the weather class to apply
                 setTimeout(() => {
-                    console.log('Triggering cloud decorations generation');
-                    
-                    // First check if the cloud container exists
-                    let container = document.getElementById('cloud-decorations-container');
-                    if (!container) {
-                        console.log('Cloud container not found, creating it');
-                        container = document.createElement('div');
-                        container.id = 'cloud-decorations-container';
-                        container.style.position = 'fixed';
-                        container.style.top = '0';
-                        container.style.left = '0';
-                        container.style.width = '100%';
-                        container.style.height = '100%';
-                        container.style.zIndex = '-1';
-                        container.style.pointerEvents = 'none';
-                        document.body.appendChild(container);
-                    }
-                    
-                    // If clouds.js script is not loaded yet, dynamically add it
-                    if (!window.cloudDecorations.generate) {
-                        console.log('Cloud decorations not fully loaded, loading script');
-                        const script = document.createElement('script');
-                        script.src = 'components/decorations/clouds.js';
-                        script.onload = function() {
-                            console.log('Cloud decorations script loaded, initializing');
-                            if (window.cloudDecorations && window.cloudDecorations.init) {
-                                window.cloudDecorations.init();
-                            }
-                        };
-                        document.head.appendChild(script);
-                    } else {
-                        // Clouds script is loaded, generate clouds
-                        if (typeof window.cloudDecorations.generate === 'function') {
-                            window.cloudDecorations.generate();
-                        } else {
-                            console.error('Cloud decorations generate function not available');
-                        }
+                    console.log('Generating cloud decorations');
+                    if (typeof window.cloudDecorations.generate === 'function') {
+                        window.cloudDecorations.generate();
                     }
                 }, 100);
             }
@@ -2398,4 +2474,262 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load ads
     loadAds();
+});
+
+// Add video error recovery to initialization
+document.addEventListener('DOMContentLoaded', () => {
+    // Set up global video error handler
+    document.addEventListener('error', (e) => {
+        if (e.target.tagName === 'VIDEO') {
+            console.error('Video error:', e.target.id, e);
+            const video = e.target;
+            // Try to recover the video
+            forceReloadVideo(video).catch(err => {
+                console.error('Failed to recover video:', err);
+            });
+        }
+    }, true);
+    
+    // Rest of initialization code...
+});
+
+// Add visual debug overlay for TV
+function createDebugOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'video-debug-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 14px;
+        z-index: 9999;
+        max-width: 300px;
+        word-break: break-all;
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function updateDebugOverlay(message, isError = false) {
+    let overlay = document.getElementById('video-debug-overlay');
+    if (!overlay) {
+        overlay = createDebugOverlay();
+    }
+    
+    const timestamp = new Date().toLocaleTimeString();
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        margin: 5px 0;
+        padding: 5px;
+        border-left: 3px solid ${isError ? '#ff4444' : '#44ff44'};
+        background: ${isError ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 255, 0, 0.2)'};
+    `;
+    messageDiv.textContent = `[${timestamp}] ${message}`;
+    
+    overlay.appendChild(messageDiv);
+    
+    // Keep only last 5 messages
+    while (overlay.children.length > 5) {
+        overlay.removeChild(overlay.firstChild);
+    }
+}
+
+// Modify ensureVideoSource to use visual debug
+async function ensureVideoSource(video, videoId) {
+    const source = video.querySelector('source');
+    if (!source) {
+        updateDebugOverlay(`No source element found for ${videoId}`, true);
+        return false;
+    }
+
+    updateDebugOverlay(`Loading video: ${videoId}`);
+    
+    // Get the base video path
+    const basePath = `components/decorations/${videoId.replace('video-', '')}_daytime.mp4`;
+    updateDebugOverlay(`Video path: ${basePath}`);
+    
+    // Set the source with cache busting
+    source.src = `${basePath}?t=${Date.now()}`;
+    video.load();
+    
+    return new Promise((resolve) => {
+        const handleCanPlay = () => {
+            updateDebugOverlay(`Video ${videoId} can play`);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            resolve(true);
+        };
+        
+        const handleError = (e) => {
+            updateDebugOverlay(`Error loading ${videoId}: ${e.target.error?.message || 'Unknown error'}`, true);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            resolve(false);
+        };
+        
+        video.addEventListener('canplay', handleCanPlay, { once: true });
+        video.addEventListener('error', handleError, { once: true });
+        
+        // Set a timeout in case the video never loads
+        setTimeout(() => {
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('error', handleError);
+            updateDebugOverlay(`Timeout loading ${videoId}`, true);
+            resolve(false);
+        }, 10000);
+    });
+}
+
+// Modify forceReloadVideo to use visual debug
+async function forceReloadVideo(video) {
+    if (!video) {
+        updateDebugOverlay('No video element provided', true);
+        return false;
+    }
+
+    updateDebugOverlay(`Reloading video: ${video.id}`);
+    
+    // Reset video state
+    video.pause();
+    video.currentTime = 0;
+    video.style.display = 'none';
+    
+    // Ensure source is properly set
+    const sourceOk = await ensureVideoSource(video, video.id);
+    if (!sourceOk) {
+        updateDebugOverlay(`Failed to set source for ${video.id}`, true);
+        return false;
+    }
+    
+    // Set video attributes
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('muted', 'true');
+    video.setAttribute('autoplay', 'true');
+    video.setAttribute('loop', 'true');
+    video.setAttribute('preload', 'auto');
+    video.muted = true;
+    video.playbackRate = 0.5;
+    
+    // Make video visible
+    video.style.display = 'block';
+    
+    // Try to play with multiple strategies
+    const playStrategies = [
+        {
+            name: 'Direct play',
+            fn: async () => {
+                try {
+                    await video.play();
+                    return true;
+                } catch (e) {
+                    updateDebugOverlay(`Direct play failed: ${e.message}`, true);
+                    return false;
+                }
+            }
+        },
+        {
+            name: 'Click simulation',
+            fn: async () => {
+                try {
+                    const clickEvent = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    });
+                    document.body.dispatchEvent(clickEvent);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await video.play();
+                    return true;
+                } catch (e) {
+                    updateDebugOverlay(`Click simulation failed: ${e.message}`, true);
+                    return false;
+                }
+            }
+        },
+        {
+            name: 'Visibility toggle',
+            fn: async () => {
+                try {
+                    document.body.style.visibility = 'hidden';
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    document.body.style.visibility = 'visible';
+                    await video.play();
+                    return true;
+                } catch (e) {
+                    updateDebugOverlay(`Visibility toggle failed: ${e.message}`, true);
+                    return false;
+                }
+            }
+        },
+        {
+            name: 'Video reset',
+            fn: async () => {
+                try {
+                    video.style.display = 'none';
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    video.style.display = 'block';
+                    await video.play();
+                    return true;
+                } catch (e) {
+                    updateDebugOverlay(`Video reset failed: ${e.message}`, true);
+                    return false;
+                }
+            }
+        }
+    ];
+    
+    // Try each strategy in sequence
+    for (let i = 0; i < playStrategies.length; i++) {
+        const strategy = playStrategies[i];
+        updateDebugOverlay(`Trying strategy ${i + 1}: ${strategy.name}`);
+        const success = await strategy.fn();
+        if (success) {
+            updateDebugOverlay(`Success with strategy ${i + 1}: ${strategy.name}`);
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    updateDebugOverlay(`All play strategies failed for ${video.id}`, true);
+    return false;
+}
+
+// Modify setWeatherBackground to use visual debug
+async function setWeatherBackground(code) {
+    updateDebugOverlay(`Setting weather background for code: ${code}`);
+    
+    // ... rest of the existing setWeatherBackground code ...
+    
+    // When handling the active video:
+    if (activeVideo) {
+        updateDebugOverlay(`Attempting to load video: ${activeVideoId}`);
+        const success = await forceReloadVideo(activeVideo);
+        
+        if (!success) {
+            updateDebugOverlay(`Failed to load video ${activeVideoId}, using cloud decorations`, true);
+            useVideoBackground = false;
+            // ... rest of fallback code ...
+        }
+    } else {
+        updateDebugOverlay(`Video element ${activeVideoId} not found`, true);
+        useVideoBackground = false;
+    }
+    
+    // ... rest of the existing code ...
+}
+
+// Add debug overlay initialization
+document.addEventListener('DOMContentLoaded', () => {
+    // Create debug overlay
+    createDebugOverlay();
+    updateDebugOverlay('Weather app initialized');
+    
+    // Rest of initialization code...
 });
