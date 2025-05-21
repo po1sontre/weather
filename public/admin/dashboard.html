@@ -41,6 +41,47 @@
                         <input type="url" id="adLink" name="link" placeholder="Enter ad destination URL">
                     </div>
                     
+                    <div class="scheduling-section">
+                        <h3>Schedule Ad</h3>
+                        <div class="form-group">
+                            <label for="startDate">Start Date</label>
+                            <input type="datetime-local" id="startDate" name="startDate" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endDate">End Date</label>
+                            <input type="datetime-local" id="endDate" name="endDate" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="displayDays">Display Days</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" name="displayDays" value="0"> Sunday</label>
+                                <label><input type="checkbox" name="displayDays" value="1"> Monday</label>
+                                <label><input type="checkbox" name="displayDays" value="2"> Tuesday</label>
+                                <label><input type="checkbox" name="displayDays" value="3"> Wednesday</label>
+                                <label><input type="checkbox" name="displayDays" value="4"> Thursday</label>
+                                <label><input type="checkbox" name="displayDays" value="5"> Friday</label>
+                                <label><input type="checkbox" name="displayDays" value="6"> Saturday</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="displayHours">Display Hours</label>
+                            <div class="time-range">
+                                <input type="time" id="startTime" name="startTime" required>
+                                <span>to</span>
+                                <input type="time" id="endTime" name="endTime" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="priority">Priority (1-10)</label>
+                            <input type="number" id="priority" name="priority" min="1" max="10" value="5">
+                            <small>Higher priority ads will be shown more frequently</small>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="upload-btn">Upload Ad</button>
                 </form>
             </div>

@@ -485,3 +485,174 @@ input[type="url"]:focus {
     word-break: break-all;
     text-align: center;
 }
+
+.scheduling-section {
+    background: var(--bg-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border: 1px solid var(--border-color);
+}
+
+.scheduling-section h3 {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    margin: 0 0 1rem 0;
+}
+
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.time-range {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.time-range input[type="time"] {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.time-range input[type="time"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+.time-range span {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+input[type="datetime-local"] {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    width: 100%;
+    transition: var(--transition);
+}
+
+input[type="datetime-local"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    width: 100px;
+    transition: var(--transition);
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+
+/* Ad card scheduling info */
+.ad-schedule-info {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.ad-schedule-info p {
+    margin: 0.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ad-schedule-info i {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+}
+
+.ad-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.ad-status.active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.ad-status.scheduled {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.ad-status.expired {
+    background-color: var(--error-color);
+    color: white;
+}
+
+/* Responsive adjustments for scheduling section */
+@media (max-width: 768px) {
+    .checkbox-group {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .time-range {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .time-range input[type="time"] {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .checkbox-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .scheduling-section {
+        padding: 1rem;
+    }
+}

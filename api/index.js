@@ -90,6 +90,50 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: 'No image file provided' });
         }
 
+        // Validate scheduling data
+        const {
+            startDate,
+            endDate,
+            displayDays,
+            startTime,
+            endTime,
+            priority,
+            link
+        } = req.body;
+
+        // Validate required fields
+        if (!startDate || !endDate || !displayDays || !startTime || !endTime) {
+            return res.status(400).json({ error: 'Missing required scheduling information' });
+        }
+
+        // Validate dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ error: 'Invalid date format' });
+        }
+        if (start >= end) {
+            return res.status(400).json({ error: 'End date must be after start date' });
+        }
+
+        // Validate display days
+        const days = Array.isArray(displayDays) ? displayDays : [displayDays];
+        if (!days.every(day => !isNaN(day) && day >= 0 && day <= 6)) {
+            return res.status(400).json({ error: 'Invalid display days' });
+        }
+
+        // Validate time format
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+            return res.status(400).json({ error: 'Invalid time format' });
+        }
+
+        // Validate priority
+        const adPriority = parseInt(priority) || 5;
+        if (adPriority < 1 || adPriority > 10) {
+            return res.status(400).json({ error: 'Priority must be between 1 and 10' });
+        }
+
         // Upload image to Vercel Blob
         const blob = await put(req.file.originalname, req.file.buffer, {
             access: 'public',
@@ -105,9 +149,15 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
         const newAd = {
             id: Date.now().toString(),
             imageUrl: blob.url,
-            link: req.body.link || '#',
+            link: link || '#',
             createdAt: new Date().toISOString(),
-            status: 'active',
+            startDate,
+            endDate,
+            displayDays: days,
+            startTime,
+            endTime,
+            priority: adPriority,
+            status: 'scheduled',
             impressions: 0,
             clicks: 0
         };
@@ -174,17 +224,84 @@ app.delete('/api/delete-ad/:id', async (req, res) => {
     }
 });
 
-// Stats endpoint
+// Track ad impression
+app.post('/api/ads/:id/impression', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ads = await getAds();
+        const adIndex = ads.findIndex(ad => ad.id === id);
+        
+        if (adIndex === -1) {
+            return res.status(404).json({ error: 'Ad not found' });
+        }
+        
+        ads[adIndex].impressions = (ads[adIndex].impressions || 0) + 1;
+        await saveAds(ads);
+        
+        res.json({ success: true, impressions: ads[adIndex].impressions });
+    } catch (error) {
+        console.error('Error tracking impression:', error);
+        res.status(500).json({ error: 'Failed to track impression' });
+    }
+});
+
+// Track ad click
+app.post('/api/ads/:id/click', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ads = await getAds();
+        const adIndex = ads.findIndex(ad => ad.id === id);
+        
+        if (adIndex === -1) {
+            return res.status(404).json({ error: 'Ad not found' });
+        }
+        
+        ads[adIndex].clicks = (ads[adIndex].clicks || 0) + 1;
+        await saveAds(ads);
+        
+        res.json({ success: true, clicks: ads[adIndex].clicks });
+    } catch (error) {
+        console.error('Error tracking click:', error);
+        res.status(500).json({ error: 'Failed to track click' });
+    }
+});
+
+// Get ad stats with scheduling information
 app.get('/api/stats', async (req, res) => {
     try {
         const ads = await getAds();
+        const now = new Date();
+        
         const stats = {
             totalAds: ads.length,
-            activeAds: ads.filter(ad => ad.status === 'active').length,
-            pendingAds: ads.filter(ad => ad.status === 'pending').length,
+            activeAds: ads.filter(ad => {
+                const start = new Date(ad.startDate);
+                const end = new Date(ad.endDate);
+                return now >= start && now <= end;
+            }).length,
+            scheduledAds: ads.filter(ad => {
+                const start = new Date(ad.startDate);
+                return now < start;
+            }).length,
+            expiredAds: ads.filter(ad => {
+                const end = new Date(ad.endDate);
+                return now > end;
+            }).length,
             totalImpressions: ads.reduce((sum, ad) => sum + (ad.impressions || 0), 0),
-            totalClicks: ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0)
+            totalClicks: ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0),
+            adsByDay: ads.reduce((acc, ad) => {
+                ad.displayDays.forEach(day => {
+                    acc[day] = (acc[day] || 0) + 1;
+                });
+                return acc;
+            }, {}),
+            adsByPriority: ads.reduce((acc, ad) => {
+                const priority = ad.priority || 5;
+                acc[priority] = (acc[priority] || 0) + 1;
+                return acc;
+            }, {})
         };
+        
         res.json(stats);
     } catch (error) {
         console.error('Error fetching stats:', error);
