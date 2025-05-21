@@ -169,6 +169,15 @@
       }
     },
     {
+      "src": "/static",
+      "dest": "/public/static.html",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
+    },
+    {
       "handle": "filesystem"
     },
     {
