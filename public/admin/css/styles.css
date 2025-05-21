@@ -332,17 +332,20 @@ input[type="url"]:focus {
 }
 
 .ad-card {
-    background-color: var(--bg-color);
+    background: #fff;
     border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    transition: var(--transition);
-    display: flex;
-    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.ad-card:hover {
+.ad-card.clickable {
+    cursor: pointer;
+}
+
+.ad-card.clickable:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .ad-card img {
@@ -857,4 +860,19 @@ small {
     .form-actions button {
         width: 100%;
     }
+}
+
+.clickable-hint {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+    text-align: center;
+    color: #666;
+    border: 1px dashed #ddd;
+}
+
+.clickable-hint i {
+    color: #007bff;
+    margin-right: 4px;
 }

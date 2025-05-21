@@ -358,11 +358,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function createAdCard(ad) {
         const card = document.createElement('div');
         card.className = 'ad-card';
-        card.onclick = () => openScheduleModal(ad.id);
-        card.style.cursor = 'pointer';
         
         const status = getAdStatus(ad);
         const statusClass = status.toLowerCase();
+        
+        // Only make unscheduled ads clickable
+        if (status === 'Unscheduled') {
+            card.onclick = () => openScheduleModal(ad.id);
+            card.classList.add('clickable');
+        }
         
         card.innerHTML = `
             <div class="ad-status-badge ${statusClass}">${status}</div>
@@ -381,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p><i class="fas fa-star"></i> Priority: ${ad.schedule.priority}</p>
                     </div>
                 ` : `
-                    <div class="ad-schedule-info">
+                    <div class="ad-schedule-info clickable-hint">
                         <p><i class="fas fa-info-circle"></i> Click to schedule this ad</p>
                     </div>
                 `}
