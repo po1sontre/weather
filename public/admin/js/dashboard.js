@@ -219,4 +219,245 @@ document.addEventListener('DOMContentLoaded', function() {
     window.logout = logout;
     window.showSuccess = showSuccess;
     window.showError = showError;
+
+    // Modal handling
+    const scheduleModal = document.getElementById('scheduleModal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const scheduleForm = document.getElementById('scheduleForm');
+    let currentAdId = null;
+
+    function openScheduleModal(adId) {
+        currentAdId = adId;
+        scheduleModal.classList.add('show');
+        // Reset form
+        scheduleForm.reset();
+    }
+
+    function closeScheduleModal() {
+        scheduleModal.classList.remove('show');
+        currentAdId = null;
+        scheduleForm.reset();
+    }
+
+    closeModalBtn.addEventListener('click', closeScheduleModal);
+    document.querySelector('.cancel-btn').addEventListener('click', closeScheduleModal);
+
+    // Close modal when clicking outside
+    scheduleModal.addEventListener('click', (e) => {
+        if (e.target === scheduleModal) {
+            closeScheduleModal();
+        }
+    });
+
+    // Handle ad upload
+    async function handleAdUpload(e) {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        const imageFile = document.getElementById('adImage').files[0];
+        const link = document.getElementById('adLink').value;
+        
+        if (!imageFile) {
+            showNotification('Please select an image', 'error');
+            return;
+        }
+        
+        if (!link) {
+            showNotification('Please enter a link', 'error');
+            return;
+        }
+        
+        formData.append('image', imageFile);
+        formData.append('link', link);
+        
+        try {
+            const response = await fetch('/api/upload-ad', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to upload ad');
+            }
+            
+            const result = await response.json();
+            showNotification('Ad uploaded successfully', 'success');
+            document.getElementById('uploadForm').reset();
+            loadAds(); // Refresh the ad list
+        } catch (error) {
+            console.error('Error uploading ad:', error);
+            showNotification('Failed to upload ad', 'error');
+        }
+    }
+
+    // Handle ad scheduling
+    async function handleAdSchedule(e) {
+        e.preventDefault();
+        
+        if (!currentAdId) {
+            showNotification('No ad selected for scheduling', 'error');
+            return;
+        }
+        
+        const formData = new FormData(scheduleForm);
+        const scheduleData = {
+            startDate: formData.get('startDate'),
+            endDate: formData.get('endDate'),
+            displayDays: Array.from(formData.getAll('displayDays')),
+            startTime: formData.get('startTime'),
+            endTime: formData.get('endTime'),
+            priority: parseInt(formData.get('priority'))
+        };
+        
+        try {
+            const response = await fetch(`/api/ads/${currentAdId}/schedule`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scheduleData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to schedule ad');
+            }
+            
+            showNotification('Ad scheduled successfully', 'success');
+            closeScheduleModal();
+            loadAds(); // Refresh the ad list
+        } catch (error) {
+            console.error('Error scheduling ad:', error);
+            showNotification('Failed to schedule ad', 'error');
+        }
+    }
+
+    // Load and display ads
+    async function loadAds() {
+        try {
+            const response = await fetch('/api/ads');
+            if (!response.ok) {
+                throw new Error('Failed to fetch ads');
+            }
+            
+            const ads = await response.json();
+            const adList = document.getElementById('adList');
+            adList.innerHTML = '';
+            
+            ads.forEach(ad => {
+                const adCard = createAdCard(ad);
+                adList.appendChild(adCard);
+            });
+            
+            updateStats(ads);
+        } catch (error) {
+            console.error('Error loading ads:', error);
+            showNotification('Failed to load ads', 'error');
+        }
+    }
+
+    function createAdCard(ad) {
+        const card = document.createElement('div');
+        card.className = 'ad-card';
+        
+        const status = getAdStatus(ad);
+        const statusClass = status.toLowerCase();
+        
+        card.innerHTML = `
+            <div class="ad-status-badge ${statusClass}">${status}</div>
+            <img src="${ad.imageUrl}" alt="Ad" class="ad-image">
+            <div class="ad-info">
+                <p class="ad-link">${ad.link}</p>
+                <div class="ad-stats">
+                    <span><i class="fas fa-eye"></i> ${ad.impressions || 0}</span>
+                    <span><i class="fas fa-mouse-pointer"></i> ${ad.clicks || 0}</span>
+                </div>
+                ${ad.schedule ? `
+                    <div class="ad-schedule-info">
+                        <p><i class="fas fa-calendar"></i> ${formatDate(ad.schedule.startDate)} - ${formatDate(ad.schedule.endDate)}</p>
+                        <p><i class="fas fa-clock"></i> ${ad.schedule.startTime} - ${ad.schedule.endTime}</p>
+                        <p><i class="fas fa-calendar-week"></i> ${formatDisplayDays(ad.schedule.displayDays)}</p>
+                        <p><i class="fas fa-star"></i> Priority: ${ad.schedule.priority}</p>
+                    </div>
+                ` : ''}
+                <div class="ad-actions">
+                    ${!ad.schedule ? 
+                        `<button class="schedule-btn" onclick="openScheduleModal('${ad.id}')">Schedule Ad</button>` :
+                        `<button class="edit-schedule-btn" onclick="openScheduleModal('${ad.id}')">Edit Schedule</button>`
+                    }
+                </div>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    function getAdStatus(ad) {
+        if (!ad.schedule) return 'Unscheduled';
+        
+        const now = new Date();
+        const startDate = new Date(ad.schedule.startDate);
+        const endDate = new Date(ad.schedule.endDate);
+        
+        if (now < startDate) return 'Scheduled';
+        if (now > endDate) return 'Expired';
+        return 'Active';
+    }
+
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    function formatDisplayDays(days) {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days.map(day => dayNames[day]).join(', ');
+    }
+
+    function updateStats(ads) {
+        const stats = {
+            total: ads.length,
+            unscheduled: ads.filter(ad => !ad.schedule).length,
+            scheduled: ads.filter(ad => ad.schedule && new Date(ad.schedule.startDate) > new Date()).length,
+            active: ads.filter(ad => {
+                if (!ad.schedule) return false;
+                const now = new Date();
+                return now >= new Date(ad.schedule.startDate) && now <= new Date(ad.schedule.endDate);
+            }).length,
+            expired: ads.filter(ad => ad.schedule && new Date(ad.schedule.endDate) < new Date()).length,
+            totalImpressions: ads.reduce((sum, ad) => sum + (ad.impressions || 0), 0),
+            totalClicks: ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0)
+        };
+        
+        // Update stats display
+        document.getElementById('totalAds').textContent = stats.total;
+        document.getElementById('unscheduledAds').textContent = stats.unscheduled;
+        document.getElementById('scheduledAds').textContent = stats.scheduled;
+        document.getElementById('activeAds').textContent = stats.active;
+        document.getElementById('expiredAds').textContent = stats.expired;
+        document.getElementById('totalImpressions').textContent = stats.totalImpressions;
+        document.getElementById('totalClicks').textContent = stats.totalClicks;
+    }
+
+    // Event listeners
+    document.getElementById('uploadForm').addEventListener('submit', handleAdUpload);
+    scheduleForm.addEventListener('submit', handleAdSchedule);
+
+    // Search functionality
+    document.getElementById('searchAds').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const adCards = document.querySelectorAll('.ad-card');
+        
+        adCards.forEach(card => {
+            const link = card.querySelector('.ad-link').textContent.toLowerCase();
+            const status = card.querySelector('.ad-status-badge').textContent.toLowerCase();
+            const isVisible = link.includes(searchTerm) || status.includes(searchTerm);
+            card.style.display = isVisible ? 'block' : 'none';
+        });
+    });
+
+    // Initial load
+    loadAds();
 });

@@ -90,49 +90,8 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: 'No image file provided' });
         }
 
-        // Validate scheduling data
-        const {
-            startDate,
-            endDate,
-            displayDays,
-            startTime,
-            endTime,
-            priority,
-            link
-        } = req.body;
-
-        // Validate required fields
-        if (!startDate || !endDate || !displayDays || !startTime || !endTime) {
-            return res.status(400).json({ error: 'Missing required scheduling information' });
-        }
-
-        // Validate dates
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            return res.status(400).json({ error: 'Invalid date format' });
-        }
-        if (start >= end) {
-            return res.status(400).json({ error: 'End date must be after start date' });
-        }
-
-        // Validate display days
-        const days = Array.isArray(displayDays) ? displayDays : [displayDays];
-        if (!days.every(day => !isNaN(day) && day >= 0 && day <= 6)) {
-            return res.status(400).json({ error: 'Invalid display days' });
-        }
-
-        // Validate time format
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
-            return res.status(400).json({ error: 'Invalid time format' });
-        }
-
-        // Validate priority
-        const adPriority = parseInt(priority) || 5;
-        if (adPriority < 1 || adPriority > 10) {
-            return res.status(400).json({ error: 'Priority must be between 1 and 10' });
-        }
+        // Only validate link if provided
+        const { link } = req.body;
 
         // Upload image to Vercel Blob
         const blob = await put(req.file.originalname, req.file.buffer, {
@@ -151,13 +110,7 @@ app.post('/api/upload-ad', upload.single('image'), async (req, res) => {
             imageUrl: blob.url,
             link: link || '#',
             createdAt: new Date().toISOString(),
-            startDate,
-            endDate,
-            displayDays: days,
-            startTime,
-            endTime,
-            priority: adPriority,
-            status: 'scheduled',
+            status: 'unscheduled', // New default status
             impressions: 0,
             clicks: 0
         };
@@ -307,6 +260,86 @@ app.get('/api/stats', async (req, res) => {
         console.error('Error fetching stats:', error);
         res.status(500).json({ 
             error: 'Failed to fetch stats',
+            details: error.message
+        });
+    }
+});
+
+// New endpoint for scheduling ads
+app.post('/api/ads/:id/schedule', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            startDate,
+            endDate,
+            displayDays,
+            startTime,
+            endTime,
+            priority
+        } = req.body;
+
+        // Validate required fields
+        if (!startDate || !endDate || !displayDays || !startTime || !endTime) {
+            return res.status(400).json({ error: 'Missing required scheduling information' });
+        }
+
+        // Validate dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ error: 'Invalid date format' });
+        }
+        if (start >= end) {
+            return res.status(400).json({ error: 'End date must be after start date' });
+        }
+
+        // Validate display days
+        const days = Array.isArray(displayDays) ? displayDays : [displayDays];
+        if (!days.every(day => !isNaN(day) && day >= 0 && day <= 6)) {
+            return res.status(400).json({ error: 'Invalid display days' });
+        }
+
+        // Validate time format
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+            return res.status(400).json({ error: 'Invalid time format' });
+        }
+
+        // Validate priority
+        const adPriority = parseInt(priority) || 5;
+        if (adPriority < 1 || adPriority > 10) {
+            return res.status(400).json({ error: 'Priority must be between 1 and 10' });
+        }
+
+        const ads = await getAds();
+        const adIndex = ads.findIndex(ad => ad.id === id);
+        
+        if (adIndex === -1) {
+            return res.status(404).json({ error: 'Ad not found' });
+        }
+
+        // Update ad with scheduling information
+        ads[adIndex] = {
+            ...ads[adIndex],
+            startDate,
+            endDate,
+            displayDays: days,
+            startTime,
+            endTime,
+            priority: adPriority,
+            status: new Date() < start ? 'scheduled' : 'active'
+        };
+
+        const saved = await saveAds(ads);
+        if (!saved) {
+            throw new Error('Failed to save ad schedule');
+        }
+
+        res.json(ads[adIndex]);
+    } catch (error) {
+        console.error('Error scheduling ad:', error);
+        res.status(500).json({ 
+            error: 'Failed to schedule ad',
             details: error.message
         });
     }
