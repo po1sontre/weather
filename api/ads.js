@@ -94,7 +94,7 @@ module.exports = async (req, res) => {
             console.log('Handling GET request for ads');
             const ads = await getAds();
             res.json(ads);
-        } else if (req.url === '/change-id' && req.method === 'POST') {
+        } else if ((req.url === '/change-id' || req.url === '/ads/change-id') && req.method === 'POST') {
             console.log('Handling POST request for changing ad ID');
             
             // Check if BLOB_READ_WRITE_TOKEN is available
