@@ -44,7 +44,7 @@
       "dest": "/api/ads.js"
     },
     {
-      "src": "/api/upload-ad",
+      "src": "/api/ads/change-id",
       "methods": ["POST", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Credentials": "true",
@@ -55,7 +55,7 @@
         "X-Frame-Options": "DENY",
         "X-XSS-Protection": "1; mode=block"
       },
-      "dest": "/api/ads.js"
+      "dest": "/api/ads/change-id.js"
     },
     {
       "src": "/api/delete-ad/(?<id>[^/]+)",
