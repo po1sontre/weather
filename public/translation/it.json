@@ -118,6 +118,24 @@
       "96": "Temporale con leggera grandine",
       "99": "Temporale con forte grandine"
     },
+    "windDirections": {
+      "N": "N",
+      "NNE": "NNE",
+      "NE": "NE",
+      "ENE": "ENE",
+      "E": "E",
+      "ESE": "ESE",
+      "SE": "SE",
+      "SSE": "SSE",
+      "S": "S",
+      "SSW": "SSO",
+      "SW": "SO",
+      "WSW": "OSO",
+      "W": "O",
+      "WNW": "ONO",
+      "NW": "NO",
+      "NNW": "NNO"
+    },
     "airQualityLevels": {
       "good": "Buona",
       "moderate": "Moderata",

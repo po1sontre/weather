@@ -1487,7 +1487,13 @@ function displayStationWeather(station) {
             if (typeof windSpeed === 'string') {
                 windSpeed = windSpeed.replace(',', '.');
             }
-            const windText = `${t('wind')}: ${Math.round(parseFloat(windSpeed))} ${t('kmh')} ${station.dd || ''}`;
+            // Translate wind direction if available
+            let windDir = station.dd || '';
+            if (windDir) {
+                const translatedDir = t('windDirections.' + windDir);
+                windDir = translatedDir !== 'windDirections.' + windDir ? translatedDir : windDir;
+            }
+            const windText = `${t('wind')}: ${Math.round(parseFloat(windSpeed))} ${t('kmh')} ${windDir}`;
             windElem.textContent = windText;
         } else {
             windElem.textContent = '';
