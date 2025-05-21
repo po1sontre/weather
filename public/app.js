@@ -140,18 +140,12 @@ async function getDistrictIdForCity(cityName) {
 // Function to get district name by ID
 async function getDistrictNameById(districtId) {
     try {
-        // Try to get translated district name from TRANSLATIONS
-        if (TRANSLATIONS.districts && Array.isArray(TRANSLATIONS.districts.rows)) {
-            const found = TRANSLATIONS.districts.rows.find(d => d.id === districtId || d.id === Number(districtId));
-            if (found && found.name) return found.name;
-        }
-        // Fallback to API
         const response = await fetch(`https://api-weather.services.siag.it/api/v2/district/${districtId}/bulletin`);
         const data = await response.json();
-        return data.district?.name || t('unknownDistrict');
+        return data.district?.name || TRANSLATIONS[currentLang].unknownDistrict;
     } catch (error) {
         console.error('Error getting district name:', error);
-        return t('unknownDistrict');
+        return TRANSLATIONS[currentLang].unknownDistrict;
     }
 }
 
@@ -269,9 +263,9 @@ function displayWeather(locationName, weatherData) {
     // Update location
     const locationElement = document.querySelector('.location');
     if (locationElement) {
-        // Use t helper for city translation
-        const translatedCityName = t('cities.' + shortLocationName);
-        locationElement.textContent = translatedCityName !== 'cities.' + shortLocationName ? translatedCityName : shortLocationName;
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[shortLocationName];
+        locationElement.textContent = translatedCityName || shortLocationName;
     }
     
     // Update current weather
@@ -890,12 +884,13 @@ async function populateCityDropdown() {
         // Update the dropdown
         const citySelect = document.getElementById('city-select');
         if (citySelect) {
-            citySelect.innerHTML = `<option value="">${t('selectCity')}</option>`;
+            citySelect.innerHTML = `<option value="">${TRANSLATIONS[currentLang].selectCity}</option>`;
             uniqueStations.forEach(station => {
                 const option = document.createElement('option');
-                const displayCityName = t('cities.' + station.cleanName);
-                option.value = station.cleanName;
-                option.textContent = displayCityName !== 'cities.' + station.cleanName ? displayCityName : station.cleanName;
+                // Use the cleaned name as the value, but display the translated name if available
+                const displayCityName = TRANSLATIONS[currentLang]?.cities?.[station.cleanName] || station.cleanName;
+                option.value = station.cleanName; // Keep original cleaned name as value for selection logic
+                option.textContent = displayCityName;
                 citySelect.appendChild(option);
             });
         }
@@ -1385,8 +1380,9 @@ function displayStationWeather(station) {
     const locElem = document.querySelector('.location');
     if (locElem) {
         const cleanName = cleanStationName(station.name);
-        const translatedCityName = t('cities.' + cleanName);
-        locElem.textContent = translatedCityName !== 'cities.' + cleanName ? translatedCityName : cleanName;
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[cleanName];
+        locElem.textContent = translatedCityName || cleanName;
     }
 
     // Temperature
