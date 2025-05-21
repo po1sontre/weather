@@ -19,13 +19,8 @@
       "src": "/api/auth/login",
       "methods": ["POST", "OPTIONS"],
       "headers": {
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
       },
       "dest": "/api/auth.js"
     },
@@ -33,13 +28,8 @@
       "src": "/api/ads",
       "methods": ["GET", "POST", "DELETE", "OPTIONS"],
       "headers": {
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS"
       },
       "dest": "/api/ads.js"
     },
@@ -47,13 +37,8 @@
       "src": "/api/upload-ad",
       "methods": ["POST", "OPTIONS"],
       "headers": {
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
       },
       "dest": "/api/ads.js"
     },
@@ -61,13 +46,8 @@
       "src": "/api/ads/change-id",
       "methods": ["POST", "OPTIONS"],
       "headers": {
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
       },
       "dest": "/api/ads/change-id.js"
     },
@@ -79,22 +59,14 @@
       "src": "/admin",
       "dest": "/public/admin/index.html",
       "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
       "src": "/admin/dashboard.html",
       "dest": "/public/admin/dashboard.html",
       "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
@@ -102,8 +74,7 @@
       "dest": "/public/admin/js/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "application/javascript",
-        "X-Content-Type-Options": "nosniff"
+        "content-type": "application/javascript"
       }
     },
     {
@@ -111,16 +82,14 @@
       "dest": "/public/admin/css/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "text/css",
-        "X-Content-Type-Options": "nosniff"
+        "content-type": "text/css"
       }
     },
     {
       "src": "/admin/images/(.*)",
       "dest": "/public/admin/images/$1",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable",
-        "X-Content-Type-Options": "nosniff"
+        "cache-control": "public, max-age=31536000, immutable"
       }
     },
     {
@@ -128,8 +97,7 @@
       "dest": "/components/decorations/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "video/mp4",
-        "X-Content-Type-Options": "nosniff"
+        "content-type": "video/mp4"
       }
     },
     {
@@ -137,8 +105,7 @@
       "dest": "/components/decorations/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "text/css",
-        "X-Content-Type-Options": "nosniff"
+        "content-type": "text/css"
       }
     },
     {
@@ -146,35 +113,28 @@
       "dest": "/components/decorations/$1",
       "headers": {
         "cache-control": "public, max-age=31536000, immutable",
-        "content-type": "application/javascript",
-        "X-Content-Type-Options": "nosniff"
+        "content-type": "application/javascript"
       }
     },
     {
       "src": "/gen",
       "dest": "/public/gen.html",
       "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
       "src": "/",
       "dest": "/public/index.html",
       "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
       "src": "/static",
       "dest": "/public/static.html",
       "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block"
+        "X-Content-Type-Options": "nosniff"
       }
     },
     {
@@ -182,14 +142,11 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/public/$1",
-      "headers": {
-        "X-Content-Type-Options": "nosniff"
-      }
+      "dest": "/public/$1"
     }
   ],
   "env": {
     "NODE_ENV": "production",
     "PORT": "3000"
   }
-} 
+}
