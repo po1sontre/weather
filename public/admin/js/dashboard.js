@@ -303,10 +303,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const scheduleData = {
             startDate: formData.get('startDate'),
             endDate: formData.get('endDate'),
-            displayDays: Array.from(formData.getAll('displayDays')),
-            startTime: formData.get('startTime'),
-            endTime: formData.get('endTime'),
-            priority: parseInt(formData.get('priority'))
+            displayDays: [0, 1, 2, 3, 4, 5, 6], // Show every day by default
+            startTime: '00:00', // Show all day by default
+            endTime: '23:59',
+            priority: 5 // Default priority
         };
         
         try {
@@ -358,6 +358,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function createAdCard(ad) {
         const card = document.createElement('div');
         card.className = 'ad-card';
+        card.onclick = () => openScheduleModal(ad.id);
+        card.style.cursor = 'pointer';
         
         const status = getAdStatus(ad);
         const statusClass = status.toLowerCase();
@@ -378,13 +380,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p><i class="fas fa-calendar-week"></i> ${formatDisplayDays(ad.schedule.displayDays)}</p>
                         <p><i class="fas fa-star"></i> Priority: ${ad.schedule.priority}</p>
                     </div>
-                ` : ''}
-                <div class="ad-actions">
-                    ${!ad.schedule ? 
-                        `<button class="schedule-btn" onclick="openScheduleModal('${ad.id}')">Schedule Ad</button>` :
-                        `<button class="edit-schedule-btn" onclick="openScheduleModal('${ad.id}')">Edit Schedule</button>`
-                    }
-                </div>
+                ` : `
+                    <div class="ad-schedule-info">
+                        <p><i class="fas fa-info-circle"></i> Click to schedule this ad</p>
+                    </div>
+                `}
             </div>
         `;
         

@@ -1946,24 +1946,37 @@ async function loadAds() {
         const ads = await response.json();
         
         if (ads && ads.length > 0) {
-            // Filter and sort ads based on schedule and priority
-            const eligibleAds = ads
-                .filter(ad => isAdScheduled(ad))
-                .sort((a, b) => (b.priority || 5) - (a.priority || 5));
+            // Get all ads that are either scheduled or not scheduled yet
+            const eligibleAds = ads.filter(ad => {
+                // If ad has no schedule, it's eligible
+                if (!ad.schedule) return true;
+                
+                // If ad has a schedule, check if it's within its date range
+                const now = new Date();
+                const startDate = new Date(ad.schedule.startDate);
+                const endDate = new Date(ad.schedule.endDate);
+                
+                // Include ads that are scheduled for future or currently active
+                return now <= endDate;
+            });
             
             if (eligibleAds.length > 0) {
-                // Weighted random selection based on priority
-                const totalPriority = eligibleAds.reduce((sum, ad) => sum + (ad.priority || 5), 0);
-                let random = Math.random() * totalPriority;
-                
-                let selectedAd = eligibleAds[0]; // Default to first ad
-                for (const ad of eligibleAds) {
-                    random -= (ad.priority || 5);
-                    if (random <= 0) {
-                        selectedAd = ad;
-                        break;
+                // Sort by priority and schedule status
+                eligibleAds.sort((a, b) => {
+                    // First sort by schedule status (active > scheduled > unscheduled)
+                    const statusA = getAdStatus(a);
+                    const statusB = getAdStatus(b);
+                    const statusOrder = { active: 2, scheduled: 1, unscheduled: 0 };
+                    if (statusOrder[statusA] !== statusOrder[statusB]) {
+                        return statusOrder[statusB] - statusOrder[statusA];
                     }
-                }
+                    
+                    // Then sort by priority
+                    return (b.priority || 5) - (a.priority || 5);
+                });
+                
+                // Select the first ad (highest priority and most relevant status)
+                const selectedAd = eligibleAds[0];
                 
                 const adBanner = document.getElementById('big-ad-banner');
                 if (adBanner) {
@@ -1984,7 +1997,7 @@ async function loadAds() {
                     console.error('Ad banner element not found');
                 }
             } else {
-                console.log('No eligible ads to display at this time');
+                console.log('No eligible ads to display');
                 const adBanner = document.getElementById('big-ad-banner');
                 if (adBanner) {
                     adBanner.style.display = 'none';
