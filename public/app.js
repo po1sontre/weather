@@ -1672,15 +1672,15 @@ function displayStationWeather(station) {
 setInterval(fetchWeatherData, 15 * 60 * 1000);
 
 function updateCurrentTime() {
-    // Update the top right time (if present)
-    const topRightTime = document.querySelector('.top-right-time .current-time');
-    if (topRightTime) {
+    // Update the time display in the weather header
+    const timeDisplay = document.querySelector('.time-display .current-time');
+    if (timeDisplay) {
         const now = new Date();
-        topRightTime.textContent = now.toLocaleTimeString(currentLang, {hour: '2-digit', minute:'2-digit'});
+        timeDisplay.textContent = now.toLocaleTimeString(currentLang, {hour: '2-digit', minute:'2-digit'});
     }
     
     // Update the date display in MM/DD format
-    const dateDisplay = document.querySelector('.top-right-time .current-date');
+    const dateDisplay = document.querySelector('.time-display .current-date');
     if (dateDisplay) {
         const now = new Date();
         // Format as MM/DD

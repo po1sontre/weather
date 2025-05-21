@@ -117,41 +117,6 @@ body {
   background-color: rgba(30, 40, 70, 0.25);
 }
 
-/* Time display in top right corner */
-.top-right-time {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--tv-glass-background);
-  padding: 0.5rem 1.2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border-color);
-}
-
-.top-right-time .current-time {
-  font-size: 1.5rem; /* Reduced from 1.8rem */
-  color: var(--text-color);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.top-right-time .current-date {
-  font-size: 1.3rem; /* Reduced from 1.6rem */
-  color: var(--text-color);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  padding-left: 8px;
-  border-left: 2px solid var(--primary-color);
-  margin-left: 5px;
-}
-
 /* District Info - Modern Styling */
 .district-info {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
@@ -532,21 +497,6 @@ body {
     margin-top: 10px;
   }
   
-  .top-right-time {
-    top: 8px;
-    right: 8px;
-    padding: 0.2rem 0.6rem;
-  }
-  
-  .top-right-time .current-time {
-    font-size: 1rem;
-  }
-  
-  .top-right-time .current-date {
-    font-size: 0.9rem;
-    padding-left: 4px;
-  }
-  
   .district-info {
     font-size: 0.9rem;
     padding: 0.5rem 0.8rem;
@@ -690,12 +640,12 @@ body {
     margin-top: 0.4rem;
   }
 
-  .current-time {
-    font-size: 1.5rem; /* Reduced from 1.8rem */
+  .time-display .current-time {
+    font-size: 1.3rem;
   }
 
-  .current-date {
-    font-size: 1.1rem;
+  .time-display .current-date {
+    font-size: 1.2rem;
     margin-left: 0.3rem;
   }
 
@@ -726,9 +676,9 @@ body {
     margin-top: 0.3rem; /* Reduced spacing */
   }
   
-  .top-right-time {
-    top: 20px; /* Reduced from 25px */
-    right: 20px; /* Reduced from 25px */
+  .time-display {
+    padding: 0.5rem 1.2rem;
+    margin-top: 0.6rem;
   }
   
   .humidity, 
