@@ -67,7 +67,6 @@ body {
   transition: color 1.5s ease-in-out;
   position: relative;
   overflow-x: hidden;
-  font-size: 1.28rem;
 }
 
 /* Remove old weather atmosphere classes and effects that are no longer needed */
@@ -133,7 +132,7 @@ body {
 }
 
 .district-title {
-    font-size: 2.3rem !important;
+    font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -142,7 +141,7 @@ body {
 }
 
 .district-subtitle {
-    font-size: 1.45rem !important;
+    font-size: 1.1rem;
     font-weight: 500;
     opacity: 0.9;
     letter-spacing: 0.3px;
@@ -156,19 +155,19 @@ body {
     }
     
     .district-title {
-        font-size: 1.45rem !important;
+        font-size: 1.3rem;
     }
     
     .district-subtitle {
-        font-size: 1.15rem !important;
+        font-size: 0.9rem;
     }
     
     .location {
-        font-size: 1.7rem !important;
+        font-size: 1.8rem;
     }
     
     .temperature {
-        font-size: 2.3rem !important;
+        font-size: 2.2rem;
     }
     
     .weather-icon canvas {
@@ -187,7 +186,7 @@ body {
     }
     
     .forecast-day .day-name {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem;
     }
     
     .forecast-day .forecast-date {
@@ -205,7 +204,7 @@ body {
     }
     
     .forecast-day .forecast-temp {
-        font-size: 1.2rem !important;
+        font-size: 1.3rem;
     }
 }
 
@@ -217,19 +216,19 @@ body {
     }
     
     .district-title {
-        font-size: 2.1rem !important;
+        font-size: 1.8rem;
     }
     
     .district-subtitle {
-        font-size: 1.45rem !important;
+        font-size: 1.3rem;
     }
     
     .location {
-        font-size: 2.9rem !important;
+        font-size: 2.6rem;
     }
     
     .temperature {
-        font-size: 3.4rem !important;
+        font-size: 3rem;
     }
     
     .weather-icon canvas {
@@ -238,7 +237,7 @@ body {
     }
     
     .weather-details {
-        font-size: 1.45rem !important;
+        font-size: 1.3rem;
         gap: 2rem;
         padding: 0.6rem 1rem;
     }
@@ -248,11 +247,11 @@ body {
     }
     
     .forecast-day .day-name {
-        font-size: 1.7rem !important;
+        font-size: 1.5rem;
     }
     
     .forecast-day .forecast-date {
-        font-size: 1.35rem !important;
+        font-size: 1.2rem;
     }
     
     .forecast-day .forecast-icon canvas {
@@ -261,12 +260,12 @@ body {
     }
     
     .forecast-day .forecast-desc {
-        font-size: 1.45rem !important;
+        font-size: 1.3rem;
         min-height: 2rem;
     }
     
     .forecast-day .forecast-temp {
-        font-size: 2rem !important;
+        font-size: 1.8rem;
     }
 }
 
@@ -282,8 +281,8 @@ body {
 }
 
 .location {
-    font-size: 2.5rem !important;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 800;
     margin: 0;
     color: var(--text-color);
     letter-spacing: 1px;
@@ -291,8 +290,8 @@ body {
 }
 
 .temperature {
-    font-size: 3.2rem !important;
-    font-weight: 700;
+    font-size: 2.4rem;
+    font-weight: 800;
     margin: 0.2rem 0 0 0;
     color: var(--primary-color);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -332,7 +331,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 1.2rem;
-    font-size: 1.3rem !important;
+    font-size: 1.1rem;
     padding: 0.4rem 0.6rem;
     border-radius: 12px;
     background: var(--tv-glass-background);
@@ -363,7 +362,6 @@ body {
     transition: all 0.3s ease;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     position: relative;
-    font-size: 1.35rem !important;
 }
 
 .forecast-day:hover {
@@ -373,7 +371,7 @@ body {
 }
 
 .forecast-day .day-name {
-    font-size: 1.45rem !important;
+    font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 0.1rem;
     display: flex;
@@ -387,7 +385,7 @@ body {
 }
 
 .forecast-day .forecast-date {
-    font-size: 1.1rem !important;
+    font-size: 0.9rem;
     opacity: 0.8;
     margin-left: 0.2rem;
     color: var(--text-color);
@@ -396,12 +394,13 @@ body {
 }
 
 .forecast-day .forecast-temp {
-    font-size: 1.3rem !important;
-    font-weight: 600;
+    font-size: 1.4rem;
     position: absolute;
     top: 0.6rem;
     right: 0.6rem;
     color: var(--primary-color);
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     margin: 0;
 }
 
@@ -417,7 +416,7 @@ body {
 }
 
 .forecast-day .forecast-desc {
-    font-size: 1.1rem !important;
+    font-size: 1rem;
     margin: 0.2rem 0;
     min-height: 1.6rem;
     color: var(--text-color);
@@ -510,11 +509,11 @@ body {
   }
   
   .location {
-    font-size: 1.5rem !important;
+    font-size: 1.6rem;
   }
   
   .temperature {
-    font-size: 2rem !important;
+    font-size: 2rem;
     margin-top: 0.3rem;
   }
   

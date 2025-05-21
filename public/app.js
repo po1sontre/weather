@@ -7,19 +7,212 @@ const LOCATIONS = {
 };
 
 // Translations
-let TRANSLATIONS = {};
-
-// Function to load translation JSON file for the given language
-async function loadTranslations(lang) {
-    try {
-        const response = await fetch(`/translation/${lang}.json`);
-        if (!response.ok) throw new Error('Translation file not found');
-        TRANSLATIONS = await response.json();
-    } catch (e) {
-        console.error('Error loading translations:', e);
-        TRANSLATIONS = {};
+const TRANSLATIONS = {
+    en: {
+        feelsLike: 'Feels like',
+        wind: 'Wind',
+        humidity: 'Humidity',
+        rainChance: 'Rain chance',
+        today: 'Today',
+        high: 'High',
+        low: 'Low',
+        sunrise: 'Sunrise',
+        sunset: 'Sunset',
+        uvIndex: 'UV Index',
+        nextDays: 'Next 3 Days',
+        snowline: 'Snowline',
+        airQuality: 'Air Quality',
+        moonPhase: 'Moon Phase',
+        loading: 'Loading weather data...',
+        error: 'Error fetching weather data. Please try again later.',
+        districtForecast: 'District Forecast',
+        selectCity: 'Select a city',
+        unknown: 'Unknown',
+        unknownDistrict: 'Unknown District',
+        temperature: 'Temperature',
+        forecast: 'Forecast',
+        weatherDetails: 'Weather Details',
+        currentWeather: 'Current Weather',
+        invalidData: 'Invalid station data',
+        yourAdHere: 'Your Ad Here',
+        yourBigAdHere: 'SOUTH TYROL WEATHER - ADVERTISEMENT SPACE AVAILABLE',
+        kmh: 'km/h',
+        day: 'Day',
+        night: 'Night',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'Weather App',
+        direction: 'Direction',
+        pressure: 'Pressure',
+        hPa: 'hPa',
+        visibility: 'Visibility',
+        km: 'km',
+        precipitation: 'Precipitation',
+        mm: 'mm',
+        monday: 'Monday',
+        tuesday: 'Tuesday',
+        wednesday: 'Wednesday',
+        thursday: 'Thursday',
+        friday: 'Friday',
+        saturday: 'Saturday',
+        sunday: 'Sunday',
+        january: 'January',
+        february: 'February',
+        march: 'March',
+        april: 'April',
+        may: 'May',
+        june: 'June',
+        july: 'July',
+        august: 'August',
+        september: 'September',
+        october: 'October',
+        november: 'November',
+        december: 'December',
+        forecastNote: 'Note: This forecast covers the entire district, not just',
+        cities: {
+            'Bolzano': 'Bolzano',
+            'Merano': 'Merano',
+            'Bressanone': 'Bressanone',
+            'Brunico': 'Brunico'
+        }
+    },
+    de: {
+        feelsLike: 'Gefühlt',
+        wind: 'Wind',
+        humidity: 'Luftfeuchtigkeit',
+        rainChance: 'Regenwahrscheinlichkeit',
+        today: 'Heute',
+        high: 'Höchstwert',
+        low: 'Tiefstwert',
+        sunrise: 'Sonnenaufgang',
+        sunset: 'Sonnenuntergang',
+        uvIndex: 'UV-Index',
+        nextDays: 'Nächste 3 Tage',
+        snowline: 'Schneegrenze',
+        airQuality: 'Luftqualität',
+        moonPhase: 'Mondphase',
+        loading: 'Wetterdaten werden geladen...',
+        error: 'Fehler beim Laden der Wetterdaten. Bitte versuchen Sie es später erneut.',
+        districtForecast: 'Bezirksvorhersage',
+        selectCity: 'Stadt auswählen',
+        unknown: 'Unbekannt',
+        unknownDistrict: 'Unbekannter Bezirk',
+        temperature: 'Temperatur',
+        forecast: 'Vorhersage',
+        weatherDetails: 'Wetterdetails',
+        currentWeather: 'Aktuelles Wetter',
+        invalidData: 'Ungültige Stationsdaten',
+        yourAdHere: 'Ihre Werbung Hier',
+        yourBigAdHere: 'SÜDTIROL WETTER - WERBEFLÄCHE VERFÜGBAR',
+        kmh: 'km/h',
+        day: 'Tag',
+        night: 'Nacht',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'Wetter App',
+        direction: 'Richtung',
+        pressure: 'Luftdruck',
+        hPa: 'hPa',
+        visibility: 'Sichtweite',
+        km: 'km',
+        precipitation: 'Niederschlag',
+        mm: 'mm',
+        monday: 'Montag',
+        tuesday: 'Dienstag',
+        wednesday: 'Mittwoch',
+        thursday: 'Donnerstag',
+        friday: 'Freitag',
+        saturday: 'Samstag',
+        sunday: 'Sonntag',
+        january: 'Januar',
+        february: 'Februar',
+        march: 'März',
+        april: 'April',
+        may: 'Mai',
+        june: 'Juni',
+        july: 'Juli',
+        august: 'August',
+        september: 'September',
+        october: 'Oktober',
+        november: 'November',
+        december: 'Dezember',
+        forecastNote: 'Hinweis: Diese Vorhersage gilt für den gesamten Bezirk, nicht nur für',
+        cities: {
+            'Bolzano': 'Bozen',
+            'Merano': 'Meran',
+            'Bressanone': 'Brixen',
+            'Brunico': 'Bruneck'
+        }
+    },
+    it: {
+        feelsLike: 'Percepita',
+        wind: 'Vento',
+        humidity: 'Umidità',
+        rainChance: 'Probabilità di pioggia',
+        today: 'Oggi',
+        high: 'Massima',
+        low: 'Minima',
+        sunrise: 'Alba',
+        sunset: 'Tramonto',
+        uvIndex: 'Indice UV',
+        nextDays: 'Prossimi 3 giorni',
+        snowline: 'Limite neve',
+        airQuality: 'Qualità dell\'aria',
+        moonPhase: 'Fase lunare',
+        loading: 'Caricamento dati meteo...',
+        error: 'Errore nel recupero dei dati meteo. Riprova più tardi.',
+        districtForecast: 'Previsione del distretto',
+        selectCity: 'Seleziona una città',
+        unknown: 'Sconosciuto',
+        unknownDistrict: 'Distretto sconosciuto',
+        temperature: 'Temperatura',
+        forecast: 'Previsione',
+        weatherDetails: 'Dettagli meteo',
+        currentWeather: 'Meteo attuale',
+        invalidData: 'Dati della stazione non validi',
+        yourAdHere: 'Il tuo annuncio qui',
+        yourBigAdHere: 'METEO ALTO ADIGE - SPAZIO PUBBLICITARIO DISPONIBILE',
+        kmh: 'km/h',
+        day: 'Giorno',
+        night: 'Notte',
+        min: 'Min',
+        max: 'Max',
+        weatherApp: 'App Meteo',
+        direction: 'Direzione',
+        pressure: 'Pressione',
+        hPa: 'hPa',
+        visibility: 'Visibilità',
+        km: 'km',
+        precipitation: 'Precipitazioni',
+        mm: 'mm',
+        monday: 'Lunedì',
+        tuesday: 'Martedì',
+        wednesday: 'Mercoledì',
+        thursday: 'Giovedì',
+        friday: 'Venerdì',
+        saturday: 'Sabato',
+        sunday: 'Domenica',
+        january: 'Gennaio',
+        february: 'Febbraio',
+        march: 'Marzo',
+        april: 'Aprile',
+        may: 'Maggio',
+        june: 'Giugno',
+        july: 'Luglio',
+        august: 'Agosto',
+        september: 'Settembre',
+        october: 'Ottobre',
+        november: 'Novembre',
+        december: 'Dicembre',
+        forecastNote: 'Nota: Questa previsione copre l\'intero distretto, non solo',
+        cities: {
+            'Bolzano': 'Bolzano',
+            'Merano': 'Merano',
+            'Bressanone': 'Bressanone',
+            'Brunico': 'Brunico'
+        }
     }
-}
+};
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -47,15 +240,16 @@ function safeParseFloat(value) {
 const initialAdId = getUrlParameter('ad');
 
 // Initialize language from URL parameter or use default
-async function initializeLanguage() {
+function initializeLanguage() {
     const langParam = getUrlParameter('lang');
     if (langParam && ['en', 'de', 'it'].includes(langParam)) {
         currentLang = langParam;
         document.documentElement.lang = langParam;
     }
-    await loadTranslations(currentLang);
+    
     // Update page title and ad banner text with translations
     updatePageTranslations();
+    
     // Set active class on the corresponding language button
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -68,12 +262,12 @@ async function initializeLanguage() {
 // Function to update all text elements with translations
 function updatePageTranslations() {
     // Update page title
-    document.getElementById('page-title').textContent = t('weatherApp');
+    document.getElementById('page-title').textContent = TRANSLATIONS[currentLang].weatherApp;
     
     // Only update ad banner if it's empty
     const bigAdBanner = document.getElementById('big-ad-banner');
     if (bigAdBanner && !bigAdBanner.innerHTML.trim()) {
-        bigAdBanner.textContent = t('yourBigAdHere');
+        bigAdBanner.textContent = TRANSLATIONS[currentLang].yourBigAdHere;
     }
 }
 
@@ -140,18 +334,12 @@ async function getDistrictIdForCity(cityName) {
 // Function to get district name by ID
 async function getDistrictNameById(districtId) {
     try {
-        // Try to get translated district name from TRANSLATIONS
-        if (TRANSLATIONS.districts && Array.isArray(TRANSLATIONS.districts.rows)) {
-            const found = TRANSLATIONS.districts.rows.find(d => d.id === districtId || d.id === Number(districtId));
-            if (found && found.name) return found.name;
-        }
-        // Fallback to API
         const response = await fetch(`https://api-weather.services.siag.it/api/v2/district/${districtId}/bulletin`);
         const data = await response.json();
-        return data.district?.name || t('unknownDistrict');
+        return data.district?.name || TRANSLATIONS[currentLang].unknownDistrict;
     } catch (error) {
         console.error('Error getting district name:', error);
-        return t('unknownDistrict');
+        return TRANSLATIONS[currentLang].unknownDistrict;
     }
 }
 
@@ -234,19 +422,23 @@ function getMoonPhaseIcon(phase) {
 }
 
 // Function to change language
-async function changeLanguage(lang) {
+function changeLanguage(lang) {
     if (!['en', 'de', 'it'].includes(lang)) {
         return;
     }
+    
     currentLang = lang;
     document.documentElement.lang = lang;
+    
     // Update URL with the new language
     const url = new URL(window.location.href);
     url.searchParams.set('lang', lang);
     window.history.replaceState({}, '', url);
-    // Load new translations and update UI
-    await loadTranslations(lang);
+    
+    // Update UI elements with new translations
     updatePageTranslations();
+    
+    // Update weather data with new language
     fetchWeatherData();
 }
 
@@ -269,9 +461,9 @@ function displayWeather(locationName, weatherData) {
     // Update location
     const locationElement = document.querySelector('.location');
     if (locationElement) {
-        // Use t helper for city translation
-        const translatedCityName = t('cities.' + shortLocationName);
-        locationElement.textContent = translatedCityName !== 'cities.' + shortLocationName ? translatedCityName : shortLocationName;
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[shortLocationName];
+        locationElement.textContent = translatedCityName || shortLocationName;
     }
     
     // Update current weather
@@ -611,7 +803,7 @@ async function fetchWeatherData() {
                     <span class="district-title">${districtName}</span>
                 </div>
                 <div class="district-subtitle">
-                    ${cityName} • ${t('districtForecast')}
+                    ${cityName} • ${TRANSLATIONS[currentLang].districtForecast}
                 </div>
             `;
             
@@ -890,12 +1082,13 @@ async function populateCityDropdown() {
         // Update the dropdown
         const citySelect = document.getElementById('city-select');
         if (citySelect) {
-            citySelect.innerHTML = `<option value="">${t('selectCity')}</option>`;
+            citySelect.innerHTML = `<option value="">${TRANSLATIONS[currentLang].selectCity}</option>`;
             uniqueStations.forEach(station => {
                 const option = document.createElement('option');
-                const displayCityName = t('cities.' + station.cleanName);
-                option.value = station.cleanName;
-                option.textContent = displayCityName !== 'cities.' + station.cleanName ? displayCityName : station.cleanName;
+                // Use the cleaned name as the value, but display the translated name if available
+                const displayCityName = TRANSLATIONS[currentLang]?.cities?.[station.cleanName] || station.cleanName;
+                option.value = station.cleanName; // Keep original cleaned name as value for selection logic
+                option.textContent = displayCityName;
                 citySelect.appendChild(option);
             });
         }
@@ -1385,8 +1578,9 @@ function displayStationWeather(station) {
     const locElem = document.querySelector('.location');
     if (locElem) {
         const cleanName = cleanStationName(station.name);
-        const translatedCityName = t('cities.' + cleanName);
-        locElem.textContent = translatedCityName !== 'cities.' + cleanName ? translatedCityName : cleanName;
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[cleanName];
+        locElem.textContent = translatedCityName || cleanName;
     }
 
     // Temperature
@@ -1473,7 +1667,7 @@ function displayStationWeather(station) {
             if (typeof humidity === 'string') {
                 humidity = humidity.replace(',', '.');
             }
-            humidityElem.textContent = `${t('humidity')}: ${Math.round(parseFloat(humidity))}%`;
+            humidityElem.textContent = `${TRANSLATIONS[currentLang].humidity}: ${Math.round(parseFloat(humidity))}%`;
         } else {
             humidityElem.textContent = '';
         }
@@ -1487,7 +1681,7 @@ function displayStationWeather(station) {
             if (typeof windSpeed === 'string') {
                 windSpeed = windSpeed.replace(',', '.');
             }
-            const windText = `${t('wind')}: ${Math.round(parseFloat(windSpeed))} ${t('kmh')} ${station.dd || ''}`;
+            const windText = `${TRANSLATIONS[currentLang].wind}: ${Math.round(parseFloat(windSpeed))} ${TRANSLATIONS[currentLang].kmh} ${station.dd || ''}`;
             windElem.textContent = windText;
         } else {
             windElem.textContent = '';
@@ -1983,23 +2177,4 @@ async function setWeatherBackground(code) {
     } catch (e) {
         console.error(`Failed to play ${videoId}:`, e);
     }
-}
-
-// Enhanced helper function to safely get a translation string, supporting dot notation for nested keys
-function t(key) {
-    if (!TRANSLATIONS) return key;
-    const keys = key.split('.');
-    let value = TRANSLATIONS;
-    for (let k of keys) {
-        if (value && typeof value === 'object' && k in value) {
-            value = value[k];
-        } else {
-            value = undefined;
-            break;
-        }
-    }
-    if (typeof value === 'string') return value;
-    // fallback to English if available
-    if (window.FALLBACK_TRANSLATIONS && window.FALLBACK_TRANSLATIONS[key]) return window.FALLBACK_TRANSLATIONS[key];
-    return key;
 }
