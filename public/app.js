@@ -1892,56 +1892,6 @@ async function setWeatherBackground(code) {
     }
 }
 
-// Helper function to check if an ad should be displayed based on its schedule
-function isAdScheduled(ad) {
-    const now = new Date();
-    const currentDay = now.getDay();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTime = currentHour * 60 + currentMinute;
-    
-    // Check if ad is within its date range
-    const startDate = new Date(ad.startDate);
-    const endDate = new Date(ad.endDate);
-    if (now < startDate || now > endDate) {
-        return false;
-    }
-    
-    // Check if current day is in display days
-    if (!ad.displayDays.includes(currentDay)) {
-        return false;
-    }
-    
-    // Check if current time is within display hours
-    const [startHour, startMinute] = ad.startTime.split(':').map(Number);
-    const [endHour, endMinute] = ad.endTime.split(':').map(Number);
-    const startTimeMinutes = startHour * 60 + startMinute;
-    const endTimeMinutes = endHour * 60 + endMinute;
-    
-    return currentTime >= startTimeMinutes && currentTime <= endTimeMinutes;
-}
-
-// Helper function to get ad status
-function getAdStatus(ad) {
-    const now = new Date();
-    const startDate = new Date(ad.startDate);
-    const endDate = new Date(ad.endDate);
-    
-    if (now < startDate) {
-        return 'scheduled';
-    } else if (now > endDate) {
-        return 'expired';
-    } else {
-        return 'active';
-    }
-}
-
-// Helper to get URL param
-function getUrlParam(name) {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
-}
-
 // Function to load and display ads
 async function loadAds() {
     try {
@@ -1950,112 +1900,40 @@ async function loadAds() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const ads = await response.json();
-
-        // Check for ad name in URL param
-        const adNameParam = getUrlParam('ad');
-        let eligibleAds = ads.filter(ad => {
-            if (!ad.startDate || !ad.endDate) return true;
-            return ad.status === 'active';
-        });
-        if (adNameParam) {
-            eligibleAds = eligibleAds.filter(ad => ad.name && ad.name === adNameParam);
+        
+        // Get ad id from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const adId = urlParams.get('ad');
+        let selectedAd = null;
+        if (adId) {
+            selectedAd = ads.find(ad => ad.id === adId);
         }
-
-        if (ads && ads.length > 0) {
-            // Filter ads: show only active or unscheduled
-            const eligibleAds = ads.filter(ad => {
-                // If ad is unscheduled (no start/end), show it
-                if (!ad.startDate || !ad.endDate) return true;
-                // Use backend-provided status
-                return ad.status === 'active';
-            });
-
-            if (eligibleAds.length > 0) {
-                // Sort by priority and schedule status
-                eligibleAds.sort((a, b) => {
-                    // First sort by status (active > scheduled > unscheduled > expired)
-                    const statusOrder = { active: 3, scheduled: 2, unscheduled: 1, expired: 0 };
-                    const statusA = statusOrder[a.status] || 0;
-                    const statusB = statusOrder[b.status] || 0;
-                    if (statusA !== statusB) {
-                        return statusB - statusA;
-                    }
-                    // Then sort by priority
-                    return (b.priority || 5) - (a.priority || 5);
-                });
-
-                // Select the first ad (highest priority and most relevant status)
-                const selectedAd = eligibleAds[0];
-
-                const adBanner = document.getElementById('big-ad-banner');
-                if (adBanner) {
-                    // Build the ad content HTML
-                    let adContentHtml = '';
-                    if (selectedAd.imageUrl) {
-                         adContentHtml = `
-                            <a href="${selectedAd.link || '#'}" target="_blank" onclick="trackAdClick('${selectedAd.id}')">
-                                <img src="${selectedAd.imageUrl}" alt="Advertisement" onload="trackAdImpression('${selectedAd.id}')">
-                            </a>
-                         `;
-                    }
-                    // Add ad name if present
-                    let adNameHtml = selectedAd.name ? `<div class="ad-name-public">${selectedAd.name}</div>` : '';
-                    // Update ad display
-                    adBanner.innerHTML = `
-                        <div class="ad-content">
-                            ${adNameHtml}
-                            ${adContentHtml}
-                        </div>
-                    `;
-                    // Show the ad banner
-                    adBanner.style.display = 'block';
-                    console.log('Ad banner displayed successfully:', selectedAd.id);
-                } else {
-                    console.error('Ad banner element not found');
-                }
+        if (!selectedAd && ads && ads.length > 0) {
+            // Fallback to random ad
+            selectedAd = ads[Math.floor(Math.random() * ads.length)];
+        }
+        const adBanner = document.getElementById('big-ad-banner');
+        if (adBanner) {
+            if (selectedAd) {
+                adBanner.innerHTML = `
+                    <div class="ad-content">
+                        ${selectedAd.imageUrl ? `<a href="${selectedAd.link || '#'}" target="_blank"><img src="${selectedAd.imageUrl}" alt="Advertisement"></a>` : ''}
+                    </div>
+                `;
+                adBanner.style.display = 'block';
+                console.log('Ad banner displayed successfully');
             } else {
-                console.log('No eligible ads to display based on schedule.');
-                const adBanner = document.getElementById('big-ad-banner');
-                if (adBanner) {
-                    adBanner.style.display = 'none';
-                }
+                adBanner.innerHTML = '';
+                adBanner.style.display = 'none';
+                console.log('No ads available to display');
             }
         } else {
-            console.log('No ads available to display');
-            const adBanner = document.getElementById('big-ad-banner');
-            if (adBanner) {
-                adBanner.style.display = 'none';
-            }
+            console.error('Ad banner element not found');
         }
     } catch (error) {
         console.error('Error loading ads:', error);
-        const adBanner = document.getElementById('big-ad-banner');
-        if (adBanner) {
-            adBanner.style.display = 'none';
-        }
     }
 }
-
-// Function to track ad impressions
-async function trackAdImpression(adId) {
-    try {
-        await fetch(`/api/ads/${adId}/impression`, { method: 'POST' });
-    } catch (error) {
-        console.error('Error tracking ad impression:', error);
-    }
-}
-
-// Function to track ad clicks
-async function trackAdClick(adId) {
-    try {
-        await fetch(`/api/ads/${adId}/click`, { method: 'POST' });
-    } catch (error) {
-        console.error('Error tracking ad click:', error);
-    }
-}
-
-// Reload ads periodically to respect scheduling
-setInterval(loadAds, 60000); // Check every minute for schedule changes
 
 // Initialize the app with optimized settings
 document.addEventListener('DOMContentLoaded', () => {

@@ -54,43 +54,33 @@ document.addEventListener('DOMContentLoaded', function() {
     if (adForm) {
         adForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
             const formData = new FormData();
             const imageFile = document.getElementById('adImage').files[0];
             const link = document.getElementById('adLink').value;
-            const name = document.getElementById('adName').value;
+
             if (!imageFile) {
                 showError('Please select an image file');
                 return;
             }
-            if (!name) {
-                showError('Please enter an ad name');
-                return;
-            }
-            // Fetch current ads to check for duplicate name
-            let ads = [];
-            try {
-                const response = await fetch('/api/ads', { cache: 'no-cache' });
-                if (response.ok) {
-                    ads = await response.json();
-                }
-            } catch (err) { /* ignore */ }
-            const existingAd = ads.find(ad => ad.name === name);
-            if (existingAd) {
-                showError('Ad name must be unique');
-                return;
-            }
+
             formData.append('image', imageFile);
-            formData.append('link', link);
-            formData.append('name', name);
+            if (link) {
+                formData.append('link', link);
+            }
+
             try {
-                const response = await fetch('/api/ads', {
+                const response = await fetch('/api/upload-ad', {
                     method: 'POST',
                     body: formData
                 });
+
                 const result = await response.json();
+
                 if (!response.ok) {
                     throw new Error(result.error || result.details || 'Upload failed');
                 }
+
                 showSuccess('Ad uploaded successfully');
                 adForm.reset();
                 // Reset the file preview
@@ -136,14 +126,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentAdsContainer) return;
         
         try {
-            console.log('Attempting to fetch ads...');
-            const response = await fetch('/api/ads', { cache: "no-cache" });
+            const response = await fetch('/api/ads');
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('Failed to fetch ads');
             }
             
             let ads = await response.json();
-            console.log('Ads fetched for dashboard:', ads.length, ads);
             
             // Apply search filter
             if (searchTerm) {
@@ -154,23 +142,91 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (ads.length === 0) {
                 currentAdsContainer.innerHTML = '<div class="no-ads">No advertisements found</div>';
-                console.log('No ads found on dashboard.');
                 return;
             }
             
-            // Clear current ads and append new cards
-            currentAdsContainer.innerHTML = '';
+            currentAdsContainer.innerHTML = ads.map(ad => `
+                <div class="ad-card" data-id="${ad.id}" data-link="${ad.link}">
+                    <img src="${ad.imageUrl}" alt="Ad ${ad.id}">
+                    <div class="ad-info">
+                        <div class="ad-id-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <span class="ad-id-label" style="font-size:0.85em;color:#888;">ID:</span>
+                            <span class="ad-id-value" style="font-family:monospace;user-select:all;">${ad.id}</span>
+                            <button class="copy-id-btn" data-ad-id="${ad.id}" title="Copy Ad ID" style="padding:2px 8px;font-size:0.85em;cursor:pointer;">Copy</button>
+                            <button class="change-id-btn" data-ad-id="${ad.id}" title="Change Ad ID" style="padding:2px 8px;font-size:0.85em;cursor:pointer;">Change ID</button>
+                        </div>
+                        <div class="change-id-row" style="display:none;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <input type="text" class="new-id-input" value="${ad.id}" style="font-family:monospace;font-size:0.95em;width:120px;">
+                            <button class="save-id-btn" data-ad-id="${ad.id}" style="padding:2px 8px;font-size:0.85em;cursor:pointer;">Save</button>
+                            <button class="cancel-id-btn" data-ad-id="${ad.id}" style="padding:2px 8px;font-size:0.85em;cursor:pointer;">Cancel</button>
+                        </div>
+                        <p class="ad-link">${ad.link}</p>
+                        <div class="ad-actions">
+                            <button onclick="deleteAd('${ad.id}')" class="delete-btn">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
 
-            ads.forEach(ad => {
-                const adCard = createAdCard(ad);
-                currentAdsContainer.appendChild(adCard);
-                // Log the status of the ad just created, especially if it was the one scheduled
-                const status = getAdStatus(ad);
-                console.log(`Ad card created for ID: ${ad.id}, Status: ${status}${ad.id === currentAdId ? ' (Scheduled Ad)' : ''}`);
+            // Add copy event listeners
+            currentAdsContainer.querySelectorAll('.copy-id-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const adId = this.getAttribute('data-ad-id');
+                    navigator.clipboard.writeText(adId).then(() => {
+                        this.textContent = 'Copied!';
+                        setTimeout(() => {
+                            this.textContent = 'Copy';
+                        }, 1200);
+                    });
+                });
             });
 
-             // Reset currentAdId after loading ads
-            currentAdId = null;
+            // Add change ID event listeners
+            currentAdsContainer.querySelectorAll('.change-id-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.ad-info');
+                    card.querySelector('.ad-id-row').style.display = 'none';
+                    card.querySelector('.change-id-row').style.display = 'flex';
+                });
+            });
+            currentAdsContainer.querySelectorAll('.cancel-id-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.ad-info');
+                    card.querySelector('.change-id-row').style.display = 'none';
+                    card.querySelector('.ad-id-row').style.display = 'flex';
+                });
+            });
+            currentAdsContainer.querySelectorAll('.save-id-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const card = this.closest('.ad-info');
+                    const oldId = this.getAttribute('data-ad-id');
+                    const newId = card.querySelector('.new-id-input').value.trim();
+                    if (!newId) {
+                        showError('New ID cannot be empty');
+                        return;
+                    }
+                    if (oldId === newId) {
+                        card.querySelector('.change-id-row').style.display = 'none';
+                        card.querySelector('.ad-id-row').style.display = 'flex';
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/ads/change-id', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ oldId, newId })
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Failed to change ID');
+                        }
+                        showSuccess('Ad ID changed successfully');
+                        loadCurrentAds();
+                    } catch (error) {
+                        showError(error.message || 'Failed to change ad ID');
+                    }
+                });
+            });
         } catch (error) {
             console.error('Error loading ads:', error);
             currentAdsContainer.innerHTML = '<div class="error">Error loading ads. Please try again.</div>';
@@ -199,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showError('Error deleting ad. Please try again.');
             }
         }
-    }; // Added missing closing brace here
+    };
     
     // Show success message
     function showSuccess(message) {
@@ -234,341 +290,4 @@ document.addEventListener('DOMContentLoaded', function() {
     window.logout = logout;
     window.showSuccess = showSuccess;
     window.showError = showError;
-
-    // Modal handling
-    const scheduleModal = document.getElementById('scheduleModal');
-    const closeModalBtn = document.querySelector('.close-modal');
-    const scheduleForm = document.getElementById('scheduleForm');
-    const scheduleBtn = document.getElementById('scheduleSubmitBtn');
-    let currentAdId = null;
-
-    function openScheduleModal(adId) {
-        console.log(`Attempting to open schedule modal for ad ID: ${adId}`);
-        currentAdId = adId;
-        scheduleModal.classList.add('show');
-        // Reset form
-        scheduleForm.reset();
-    }
-
-    function closeScheduleModal() {
-        scheduleModal.classList.remove('show');
-        currentAdId = null;
-        scheduleForm.reset();
-    }
-
-    closeModalBtn.addEventListener('click', closeScheduleModal);
-    document.querySelector('.cancel-btn').addEventListener('click', closeScheduleModal);
-
-    // Close modal when clicking outside
-    scheduleModal.addEventListener('click', (e) => {
-        if (e.target === scheduleModal) {
-            closeScheduleModal();
-        }
-    });
-
-    // Handle ad upload
-    async function handleAdUpload(e) {
-        e.preventDefault();
-        
-        const formData = new FormData();
-        const imageFile = document.getElementById('adImage').files[0];
-        const link = document.getElementById('adLink').value;
-        
-        if (!imageFile) {
-            showError('Please select an image');
-            return;
-        }
-        
-        if (!link) {
-            showError('Please enter a link');
-            return;
-        }
-        
-        formData.append('image', imageFile);
-        formData.append('link', link);
-        
-        try {
-            const response = await fetch('/api/upload-ad', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to upload ad');
-            }
-            
-            const result = await response.json();
-            showSuccess('Ad uploaded successfully');
-            document.getElementById('uploadForm').reset();
-            loadAds(); // Refresh the ad list
-        } catch (error) {
-            console.error('Error uploading ad:', error);
-            showError('Failed to upload ad');
-        }
-    }
-
-    // Event listeners - use IMMEDIATELY INVOKED FUNCTION to avoid hoisting issues
-    (function setupEventListeners() {
-        console.log('Setting up event listeners...');
-        try {
-            const uploadForm = document.getElementById('uploadForm');
-            if (uploadForm) {
-                uploadForm.addEventListener('submit', handleAdUpload);
-            }
-            
-            function attachScheduleBtnHandler() {
-                const scheduleSubmitBtn = document.getElementById('scheduleSubmitBtn');
-                if (scheduleSubmitBtn) {
-                    console.log('Found schedule button, attaching click handler');
-                    scheduleSubmitBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        console.log('Schedule button clicked!');
-                        if (!currentAdId) {
-                            showError('No ad selected for scheduling');
-                            return;
-                        }
-                        // Get form data manually
-                        const startDate = document.getElementById('startDate').value;
-                        const endDate = document.getElementById('endDate').value;
-                        if (!startDate || !endDate) {
-                            showError('Please fill in all required fields');
-                            return;
-                        }
-                        const scheduleData = {
-                            id: currentAdId,
-                            startDate: startDate,
-                            endDate: endDate,
-                            displayDays: [0, 1, 2, 3, 4, 5, 6], 
-                            startTime: '00:00',
-                            endTime: '23:59',
-                            priority: 5
-                        };
-                        console.log('Scheduling ad with data:', scheduleData);
-                        fetch('/api/ads', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(scheduleData)
-                        })
-                        .then(response => response.json())
-                        .then(result => {
-                            console.log('Schedule API response:', result);
-                            showSuccess('Ad scheduled successfully');
-                            closeScheduleModal();
-                            loadCurrentAds();
-                        })
-                        .catch(error => {
-                            console.error('Scheduling error:', error);
-                            showError('Failed to schedule ad: ' + error.message);
-                        });
-                    });
-                } else {
-                    console.error('Schedule button not found! Retrying in 500ms...');
-                    setTimeout(() => {
-                        const retryBtn = document.getElementById('scheduleSubmitBtn');
-                        if (retryBtn) {
-                            console.log('Found schedule button on retry, attaching click handler');
-                            retryBtn.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                alert('Schedule button now works!');
-                            });
-                        } else {
-                            alert('Schedule button could not be found. Please reload the page.');
-                        }
-                    }, 500);
-                }
-            }
-            attachScheduleBtnHandler();
-            
-            // Search functionality
-            const searchAdsElem = document.getElementById('searchAds');
-            if (searchAdsElem) {
-                searchAdsElem.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    const adCards = document.querySelectorAll('.ad-card');
-                    adCards.forEach(card => {
-                        const link = card.querySelector('.ad-link')?.textContent.toLowerCase() || '';
-                        const status = card.querySelector('.ad-status-badge')?.textContent.toLowerCase() || '';
-                        const isVisible = link.includes(searchTerm) || status.includes(searchTerm);
-                        card.style.display = isVisible ? 'block' : 'none';
-                    });
-                });
-            }
-        } catch (err) {
-            console.error('Error setting up event listeners:', err);
-        }
-    })();
-
-    // Load and display ads
-    async function loadAds() {
-        try {
-            const response = await fetch('/api/ads');
-            if (!response.ok) {
-                throw new Error('Failed to fetch ads');
-            }
-            const ads = await response.json();
-            const currentAdsContainer = document.getElementById('currentAds');
-            if (!currentAdsContainer) return;
-            currentAdsContainer.innerHTML = '';
-            ads.forEach(ad => {
-                const adCard = createAdCard(ad);
-                currentAdsContainer.appendChild(adCard);
-            });
-            updateStats(ads);
-        } catch (error) {
-            console.error('Error loading ads:', error);
-            showError('Failed to load ads');
-        }
-    }
-
-    function createAdCard(ad) {
-        const card = document.createElement('div');
-        const status = getAdStatus(ad);
-        const isClickable = status === 'Unscheduled';
-
-        card.className = `ad-card ${isClickable ? 'clickable' : ''}`;
-        card.dataset.id = ad.id;
-        card.dataset.link = ad.link || '';
-
-        // Add click listener only if clickable
-        if (isClickable) {
-            card.addEventListener('click', () => {
-                console.log(`Ad card clicked for ad ID: ${ad.id}`);
-                openScheduleModal(ad.id);
-            });
-            console.log(`Click listener added to ad card for ad ID: ${ad.id}`);
-        }
-
-        card.innerHTML = `
-            <div class="ad-status-badge ${status.toLowerCase()}">${status}</div>
-            ${ad.name ? `<div class="ad-name">${ad.name}</div>` : ''}
-            <img src="${ad.imageUrl}" alt="Ad" class="ad-image">
-            <div class="ad-info">
-                <p class="ad-link">${ad.link}</p>
-                <div class="ad-stats">
-                    <span><i class="fas fa-eye"></i> ${ad.impressions || 0}</span>
-                    <span><i class="fas fa-mouse-pointer"></i> ${ad.clicks || 0}</span>
-                </div>
-                ${ad.startDate && ad.endDate ? `
-                    <div class="ad-schedule-info">
-                        <p><i class="fas fa-calendar"></i> ${formatDate(ad.startDate)} - ${formatDate(ad.endDate)}</p>
-                    </div>
-                ` : `
-                    <div class="ad-schedule-info clickable-hint">
-                        <p><i class="fas fa-info-circle"></i> Click to schedule this ad</p>
-                    </div>
-                `}
-            </div>
-        `;
-
-        // Prevent click on card from triggering when clicking the delete button
-        const deleteButton = card.querySelector('.delete-btn');
-        if (deleteButton) {
-             deleteButton.addEventListener('click', (event) => {
-                event.stopPropagation();
-                console.log(`Delete button clicked for ad ID: ${ad.id}`);
-                deleteAd(ad.id);
-            });
-        }
-
-        return card;
-    }
-
-    function getAdStatus(ad) {
-        // Use the server-provided status if available
-        if (ad.status) return ad.status.charAt(0).toUpperCase() + ad.status.slice(1);
-        
-        // Fall back to computing from dates if status isn't provided
-        if (!ad.startDate || !ad.endDate) return 'Unscheduled';
-        
-        const now = new Date();
-        const startDate = new Date(ad.startDate);
-        const endDate = new Date(ad.endDate);
-        
-        if (now < startDate) return 'Scheduled';
-        if (now > endDate) return 'Expired';
-        return 'Active';
-    }
-
-    function formatDate(dateString) {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
-
-    function formatDisplayDays(days) {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return days.map(day => dayNames[day]).join(', ');
-    }
-
-    function updateStats(ads) {
-        const stats = {
-            total: ads.length,
-            unscheduled: ads.filter(ad => !ad.startDate || !ad.endDate).length,
-            scheduled: ads.filter(ad => ad.startDate && ad.status === 'scheduled').length,
-            active: ads.filter(ad => ad.status === 'active').length,
-            expired: ads.filter(ad => ad.status === 'expired').length,
-            totalImpressions: ads.reduce((sum, ad) => sum + (ad.impressions || 0), 0),
-            totalClicks: ads.reduce((sum, ad) => sum + (ad.clicks || 0), 0)
-        };
-        
-        // Update stats display - only if elements exist
-        const totalAdsElem = document.getElementById('totalAds');
-        if (totalAdsElem) totalAdsElem.textContent = stats.total;
-        
-        const unscheduledAdsElem = document.getElementById('unscheduledAds');
-        if (unscheduledAdsElem) unscheduledAdsElem.textContent = stats.unscheduled;
-        
-        const scheduledAdsElem = document.getElementById('scheduledAds');
-        if (scheduledAdsElem) scheduledAdsElem.textContent = stats.scheduled;
-        
-        const activeAdsElem = document.getElementById('activeAds');
-        if (activeAdsElem) activeAdsElem.textContent = stats.active;
-        
-        const expiredAdsElem = document.getElementById('expiredAds');
-        if (expiredAdsElem) expiredAdsElem.textContent = stats.expired;
-        
-        const totalImpressionsElem = document.getElementById('totalImpressions');
-        if (totalImpressionsElem) totalImpressionsElem.textContent = stats.totalImpressions;
-        
-        const totalClicksElem = document.getElementById('totalClicks');
-        if (totalClicksElem) totalClicksElem.textContent = stats.totalClicks;
-    }
-
-    // Initial load
-    loadAds();
-
-    // Make openScheduleModal available globally (although now primarily called via event listener)
-    window.openScheduleModal = function(adId) {
-        console.log(`Attempting to open schedule modal for ad ID: ${adId}`);
-        const modal = document.getElementById('scheduleModal');
-        const scheduleForm = document.getElementById('scheduleForm');
-
-        if (!modal) {
-            console.error('Schedule modal element not found!');
-            return;
-        }
-
-        if (!scheduleForm) {
-             console.error('Schedule form element not found!');
-             return;
-        }
-
-        // Reset form
-        scheduleForm.reset();
-
-        // Set the ad ID in a hidden input
-        const scheduleAdIdInput = document.getElementById('scheduleAdId');
-        if (scheduleAdIdInput) {
-           scheduleAdIdInput.value = adId;
-           console.log(`Set scheduleAdIdInput value to: ${adId}`);
-        } else {
-           console.error('scheduleAdId input element not found!');
-        }
-
-        // Show modal
-        modal.classList.add('show');
-        console.log('Schedule modal should now be visible.');
-    }
 });

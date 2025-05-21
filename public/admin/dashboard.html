@@ -6,7 +6,6 @@
     <title>Ad Manager - Dashboard</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="/admin/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -21,10 +20,6 @@
             <div class="upload-section">
                 <h2>Upload New Ad</h2>
                 <form id="adForm" class="upload-form">
-                    <div class="form-group">
-                        <label for="adName">Ad Name</label>
-                        <input type="text" id="adName" name="name" placeholder="Enter ad name" required>
-                    </div>
                     <div class="form-group">
                         <label for="adImage">Ad Image</label>
                         <div class="file-upload">
@@ -61,36 +56,6 @@
                 <div id="currentAds" class="ads-grid"></div>
             </div>
         </main>
-    </div>
-
-    <!-- Schedule Modal -->
-    <div id="scheduleModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Schedule Ad</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            <form id="scheduleForm" class="schedule-form" onsubmit="return false;">
-                <input type="hidden" id="scheduleAdId">
-                
-                <div class="form-group">
-                    <label for="startDate">Start Date</label>
-                    <input type="datetime-local" id="startDate" name="startDate" required>
-                    <small>When should this ad start showing?</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="endDate">End Date</label>
-                    <input type="datetime-local" id="endDate" name="endDate" required>
-                    <small>When should this ad stop showing?</small>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="submit" id="scheduleSubmitBtn" class="schedule-btn">Schedule Ad</button>
-                    <button type="button" class="cancel-btn">Cancel</button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <div id="successMessage" class="message success-message"></div>
