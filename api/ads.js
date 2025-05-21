@@ -1,244 +1,219 @@
-const { put, del, list } = require('@vercel/blob');
+const { put, del, list, get } = require('@vercel/blob');
 const multer = require('multer');
+const METADATA_PATH = 'ads/ads.json';
 
-// Helper function to get ads directly from blob storage
-async function getAds() {
+// Helper to fetch metadata JSON from blob
+async function getAdMetadata() {
     try {
-        // List all blobs
-        const { blobs } = await list({
-            token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-
-        // Convert all image blobs to ads
-        const ads = blobs
-            .filter(blob => 
-                blob.contentType?.startsWith('image/') || 
-                blob.pathname.match(/\.(jpg|jpeg|png|gif)$/i)
-            )
-            .map(blob => ({
-                id: blob.pathname.split('/').pop().split('.')[0] || Date.now().toString(),
-                imageUrl: blob.url,
-                link: '#',
-                createdAt: blob.uploadedAt || new Date().toISOString()
-            }));
-
-        console.log('Found ads in blob storage:', ads.length);
-        return ads;
-    } catch (error) {
-        console.error('Error getting ads from blob storage:', error);
+        const { blob } = await get(METADATA_PATH, { token: process.env.BLOB_READ_WRITE_TOKEN });
+        if (!blob) return [];
+        const text = await blob.text();
+        return JSON.parse(text);
+    } catch (e) {
+        // If not found, return empty array
         return [];
     }
+}
+
+// Helper to save metadata JSON to blob
+async function saveAdMetadata(ads) {
+    await put(METADATA_PATH, JSON.stringify(ads, null, 2), {
+        access: 'public',
+        contentType: 'application/json',
+        token: process.env.BLOB_READ_WRITE_TOKEN
+    });
+
+    // Clean up old JSON files in the ads/ folder
+    try {
+        const { blobs } = await list({ token: process.env.BLOB_READ_WRITE_TOKEN, prefix: 'ads/' });
+        for (const blob of blobs) {
+            if (blob.pathname !== METADATA_PATH && blob.pathname.endsWith('.json')) {
+                console.log(`Cleaning up old metadata file: ${blob.pathname}`);
+                await del(blob.pathname, { token: process.env.BLOB_READ_WRITE_TOKEN });
+            }
+        }
+    } catch (error) {
+        console.error('Error cleaning up old JSON files:', error);
+    }
+}
+
+// Helper to sync blob images with metadata
+async function syncAdsWithBlobs() {
+    const { blobs } = await list({ token: process.env.BLOB_READ_WRITE_TOKEN });
+    const images = blobs.filter(blob => blob.contentType?.startsWith('image/') || blob.pathname.match(/\.(jpg|jpeg|png|gif)$/i));
+    let ads = await getAdMetadata();
+    let changed = false;
+    for (const img of images) {
+        if (!ads.find(ad => ad.imageUrl === img.url)) {
+            ads.push({
+                id: img.pathname.split('/').pop().split('.')[0] || Date.now().toString(),
+                imageUrl: img.url,
+                link: '#',
+                createdAt: img.uploadedAt || new Date().toISOString(),
+                status: 'unscheduled',
+                impressions: 0,
+                clicks: 0,
+                name: ''
+            });
+            changed = true;
+        }
+    }
+    // Remove metadata for images that no longer exist
+    const imageUrls = images.map(img => img.url);
+    if (ads.length !== images.length) {
+        ads = ads.filter(ad => imageUrls.includes(ad.imageUrl));
+        changed = true;
+    }
+    if (changed) await saveAdMetadata(ads);
+    return ads;
+}
+
+// Helper to compute status
+function computeAdStatus(ad) {
+    if (!ad.startDate || !ad.endDate) return 'unscheduled';
+    
+    const now = new Date();
+    const start = new Date(ad.startDate);
+    const end = new Date(ad.endDate);
+    
+    console.log(`Computing status for ad: ${ad.id}`);
+    console.log(`Start date: ${start}, End date: ${end}, Now: ${now}`);
+    console.log(`now < start: ${now < start}, now > end: ${now > end}`);
+    
+    if (now < start) return 'scheduled';
+    if (now > end) return 'expired';
+    return 'active';
 }
 
 // Configure multer with optimized settings
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 3 * 1024 * 1024, // 3MB limit
-        files: 1
-    },
+    limits: { fileSize: 3 * 1024 * 1024, files: 1 },
     fileFilter: function (req, file, cb) {
-        console.log('Processing file:', {
-            name: file.originalname,
-            size: file.size,
-            mimetype: file.mimetype
-        });
-
-        // Check file size before processing
-        if (file.size > 3 * 1024 * 1024) {
-            console.error('File too large:', file.size);
-            return cb(new Error('File size must be less than 3MB'));
-        }
-
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(file.mimetype)) {
-            console.error('Invalid file type:', file.mimetype);
             return cb(new Error('Invalid file type. Only JPEG, PNG and GIF are allowed.'));
         }
         cb(null, true);
     }
 });
 
-// Create a middleware function to handle multer
 const uploadMiddleware = upload.single('image');
 
 module.exports = async (req, res) => {
-    console.log('Request details:', {
-        method: req.method,
-        url: req.url,
-        path: req.path,
-        headers: req.headers,
-        hasBody: !!req.body,
-        contentType: req.headers['content-type'],
-        contentLength: req.headers['content-length']
-    });
-
-    // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,DELETE');
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
-
-    // Handle OPTIONS request
-    if (req.method === 'OPTIONS') {
-        console.log('Handling OPTIONS request');
-        res.status(200).end();
-        return;
-    }
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
         if (req.method === 'GET') {
-            console.log('Handling GET request for ads');
-            const ads = await getAds();
+            const { name } = req.query;
+            let ads = await syncAdsWithBlobs();
+            // Always update status before returning
+            ads = ads.map(ad => ({ ...ad, status: computeAdStatus(ad) }));
+            if (name) {
+                ads = ads.filter(ad => ad.name === name);
+            }
             res.json(ads);
         } else if (req.method === 'POST') {
-            console.log('Handling POST request for ad upload');
-            
-            // Check if BLOB_READ_WRITE_TOKEN is available
-            if (!process.env.BLOB_READ_WRITE_TOKEN) {
-                console.error('BLOB_READ_WRITE_TOKEN is not configured');
-                return res.status(500).json({ 
-                    error: 'Server configuration error',
-                    details: 'Blob storage is not configured',
-                    code: 'CONFIG_ERROR'
-                });
-            }
-
-            // Handle file upload using multer middleware
             uploadMiddleware(req, res, async function(err) {
-                if (err) {
-                    console.error('Multer error:', {
-                        name: err.name,
-                        message: err.message,
-                        code: err.code,
-                        stack: err.stack
-                    });
-
-                    // Handle specific multer errors
-                    if (err.code === 'LIMIT_FILE_SIZE') {
-                        return res.status(400).json({ 
-                            error: 'File too large',
-                            details: 'Maximum file size is 3MB',
-                            code: 'FILE_TOO_LARGE'
-                        });
-                    }
-
-                    return res.status(400).json({ 
-                        error: 'File upload error',
-                        details: err.message,
-                        code: err.code || 'MULTER_ERROR'
-                    });
-                }
-
-                if (!req.file) {
-                    console.error('No file in request');
-                    return res.status(400).json({ 
-                        error: 'No image file provided',
-                        details: 'Please select an image file to upload',
-                        code: 'NO_FILE'
-                    });
-                }
-
+                if (err) return res.status(400).json({ error: err.message });
+                if (!req.file) return res.status(400).json({ error: 'No image file provided' });
                 try {
-                    console.log('Processing file upload:', {
-                        filename: req.file.originalname,
-                        size: req.file.size,
-                        mimetype: req.file.mimetype
-                    });
-
-                    // Upload image to Vercel Blob
-                    console.log('Uploading to blob storage...');
+                    const ads = await getAdMetadata();
+                    if (ads.find(ad => ad.name === req.body.name)) {
+                        return res.status(400).json({ error: 'Ad name must be unique' });
+                    }
                     const blob = await put(req.file.originalname, req.file.buffer, {
                         access: 'public',
                         contentType: req.file.mimetype,
                         token: process.env.BLOB_READ_WRITE_TOKEN
                     });
-
-                    if (!blob || !blob.url) {
-                        console.error('Blob upload failed:', blob);
-                        throw new Error('Failed to upload image to blob storage');
-                    }
-
-                    console.log('File uploaded to blob storage:', blob.url);
-
                     const newAd = {
                         id: blob.pathname.split('/').pop().split('.')[0] || Date.now().toString(),
                         imageUrl: blob.url,
                         link: req.body.link || '#',
-                        createdAt: blob.uploadedAt || new Date().toISOString()
+                        createdAt: blob.uploadedAt || new Date().toISOString(),
+                        status: 'unscheduled',
+                        impressions: 0,
+                        clicks: 0,
+                        name: req.body.name || ''
                     };
-
-                    console.log('Ad uploaded successfully:', newAd.id);
+                    ads.push(newAd);
+                    await saveAdMetadata(ads);
                     res.json(newAd);
                 } catch (error) {
-                    console.error('Error processing upload:', {
-                        name: error.name,
-                        message: error.message,
-                        code: error.code,
-                        stack: error.stack
-                    });
-
-                    // Handle specific blob storage errors
-                    if (error.message.includes('blob storage')) {
-                        return res.status(500).json({ 
-                            error: 'Storage error',
-                            details: 'Failed to store the image. Please try again.',
-                            code: 'STORAGE_ERROR'
-                        });
-                    }
-
-                    res.status(500).json({ 
-                        error: 'Failed to process upload',
-                        details: error.message,
-                        code: error.code || 'UPLOAD_ERROR'
-                    });
+                    res.status(500).json({ error: error.message });
                 }
             });
         } else if (req.method === 'DELETE') {
-            const { id } = req.query;
-            const ads = await getAds();
-            const ad = ads.find(ad => ad.id === id);
+            // Expect ?id=... in query
+            const id = req.query.id;
+            if (!id) return res.status(400).json({ error: 'Missing ad id' });
+            let ads = await getAdMetadata();
+            const ad = ads.find(a => a.id === id);
+            if (!ad) return res.status(404).json({ error: 'Ad not found' });
+            // Delete image from blob
+            try { await del(ad.imageUrl, { token: process.env.BLOB_READ_WRITE_TOKEN }); } catch {}
+            ads = ads.filter(a => a.id !== id);
+            await saveAdMetadata(ads);
+            res.json({ message: 'Ad deleted successfully' });
+        } else if (req.method === 'PATCH') {
+            // For scheduling or updating ad metadata
+            const { id, startDate, endDate, displayDays, startTime, endTime, priority, ...update } = req.body;
             
-            if (!ad) {
-                return res.status(404).json({ error: 'Ad not found' });
+            console.log('PATCH request received for ad:', id);
+            console.log('Schedule data:', { startDate, endDate, displayDays, startTime, endTime, priority });
+            
+            if (!id) return res.status(400).json({ error: 'Missing ad id' });
+            
+            let ads = await getAdMetadata();
+            const idx = ads.findIndex(a => a.id === id);
+            if (idx === -1) return res.status(404).json({ error: 'Ad not found' });
+            
+            // Update all schedule fields if present
+            if (startDate) ads[idx].startDate = startDate;
+            if (endDate) ads[idx].endDate = endDate;
+            if (displayDays) ads[idx].displayDays = displayDays || [0, 1, 2, 3, 4, 5, 6];
+            if (startTime) ads[idx].startTime = startTime || '00:00';
+            if (endTime) ads[idx].endTime = endTime || '23:59';
+            if (priority !== undefined) ads[idx].priority = priority || 5;
+            
+            // Update any other fields (like name, link)
+            Object.assign(ads[idx], update);
+            
+            // Always update status if we have schedule data
+            if (ads[idx].startDate && ads[idx].endDate) {
+                ads[idx].status = computeAdStatus(ads[idx]);
+                console.log(`Updated ad ${id} status to: ${ads[idx].status}`);
             }
             
-            // Delete image from Vercel Blob
-            try {
-                await del(ad.imageUrl, {
-                    token: process.env.BLOB_READ_WRITE_TOKEN
-                });
-                console.log('Ad deleted successfully:', id);
-                res.json({ message: 'Ad deleted successfully' });
-            } catch (error) {
-                console.error('Error deleting image:', error);
-                res.status(500).json({ 
-                    error: 'Failed to delete ad',
-                    details: error.message,
-                    code: 'DELETE_ERROR'
-                });
-            }
+            await saveAdMetadata(ads);
+            res.json(ads[idx]);
+        } else if (req.method === 'POST' && req.url.endsWith('/impression')) {
+            // Track impression
+            const id = req.url.split('/').slice(-2)[0];
+            let ads = await getAdMetadata();
+            const idx = ads.findIndex(a => a.id === id);
+            if (idx === -1) return res.status(404).json({ error: 'Ad not found' });
+            ads[idx].impressions = (ads[idx].impressions || 0) + 1;
+            await saveAdMetadata(ads);
+            res.json({ success: true, impressions: ads[idx].impressions });
+        } else if (req.method === 'POST' && req.url.endsWith('/click')) {
+            // Track click
+            const id = req.url.split('/').slice(-2)[0];
+            let ads = await getAdMetadata();
+            const idx = ads.findIndex(a => a.id === id);
+            if (idx === -1) return res.status(404).json({ error: 'Ad not found' });
+            ads[idx].clicks = (ads[idx].clicks || 0) + 1;
+            await saveAdMetadata(ads);
+            res.json({ success: true, clicks: ads[idx].clicks });
         } else {
-            console.log('Method not allowed:', req.method);
-            res.status(405).json({ 
-                error: 'Method not allowed',
-                code: 'METHOD_NOT_ALLOWED'
-            });
+            res.status(405).json({ error: 'Method not allowed' });
         }
     } catch (error) {
-        console.error('API Error:', {
-            name: error.name,
-            message: error.message,
-            code: error.code,
-            stack: error.stack
-        });
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: error.message,
-            code: error.code || 'SERVER_ERROR'
-        });
+        res.status(500).json({ error: error.message });
     }
 }; 

@@ -1936,6 +1936,12 @@ function getAdStatus(ad) {
     }
 }
 
+// Helper to get URL param
+function getUrlParam(name) {
+    const url = new URL(window.location.href);
+    return url.searchParams.get(name);
+}
+
 // Function to load and display ads
 async function loadAds() {
     try {
@@ -1944,52 +1950,63 @@ async function loadAds() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const ads = await response.json();
-        
+
+        // Check for ad name in URL param
+        const adNameParam = getUrlParam('ad');
+        let eligibleAds = ads.filter(ad => {
+            if (!ad.startDate || !ad.endDate) return true;
+            return ad.status === 'active';
+        });
+        if (adNameParam) {
+            eligibleAds = eligibleAds.filter(ad => ad.name && ad.name === adNameParam);
+        }
+
         if (ads && ads.length > 0) {
-            // Get all ads that are either scheduled or not scheduled yet
+            // Filter ads: show only active or unscheduled
             const eligibleAds = ads.filter(ad => {
-                // If ad has no schedule, it's eligible
-                if (!ad.schedule) return true;
-                
-                // If ad has a schedule, check if it's within its date range
-                const now = new Date();
-                const startDate = new Date(ad.schedule.startDate);
-                const endDate = new Date(ad.schedule.endDate);
-                
-                // Include ads that are scheduled for future or currently active
-                return now <= endDate;
+                // If ad is unscheduled (no start/end), show it
+                if (!ad.startDate || !ad.endDate) return true;
+                // Use backend-provided status
+                return ad.status === 'active';
             });
-            
+
             if (eligibleAds.length > 0) {
                 // Sort by priority and schedule status
                 eligibleAds.sort((a, b) => {
-                    // First sort by schedule status (active > scheduled > unscheduled)
-                    const statusA = getAdStatus(a);
-                    const statusB = getAdStatus(b);
-                    const statusOrder = { active: 2, scheduled: 1, unscheduled: 0 };
-                    if (statusOrder[statusA] !== statusOrder[statusB]) {
-                        return statusOrder[statusB] - statusOrder[statusA];
+                    // First sort by status (active > scheduled > unscheduled > expired)
+                    const statusOrder = { active: 3, scheduled: 2, unscheduled: 1, expired: 0 };
+                    const statusA = statusOrder[a.status] || 0;
+                    const statusB = statusOrder[b.status] || 0;
+                    if (statusA !== statusB) {
+                        return statusB - statusA;
                     }
-                    
                     // Then sort by priority
                     return (b.priority || 5) - (a.priority || 5);
                 });
-                
+
                 // Select the first ad (highest priority and most relevant status)
                 const selectedAd = eligibleAds[0];
-                
+
                 const adBanner = document.getElementById('big-ad-banner');
                 if (adBanner) {
+                    // Build the ad content HTML
+                    let adContentHtml = '';
+                    if (selectedAd.imageUrl) {
+                         adContentHtml = `
+                            <a href="${selectedAd.link || '#'}" target="_blank" onclick="trackAdClick('${selectedAd.id}')">
+                                <img src="${selectedAd.imageUrl}" alt="Advertisement" onload="trackAdImpression('${selectedAd.id}')">
+                            </a>
+                         `;
+                    }
+                    // Add ad name if present
+                    let adNameHtml = selectedAd.name ? `<div class="ad-name-public">${selectedAd.name}</div>` : '';
                     // Update ad display
                     adBanner.innerHTML = `
                         <div class="ad-content">
-                            ${selectedAd.imageUrl ? 
-                                `<a href="${selectedAd.link || '#'}" target="_blank" onclick="trackAdClick('${selectedAd.id}')">
-                                    <img src="${selectedAd.imageUrl}" alt="Advertisement" onload="trackAdImpression('${selectedAd.id}')">
-                                </a>` : ''}
+                            ${adNameHtml}
+                            ${adContentHtml}
                         </div>
                     `;
-                    
                     // Show the ad banner
                     adBanner.style.display = 'block';
                     console.log('Ad banner displayed successfully:', selectedAd.id);
@@ -1997,7 +2014,7 @@ async function loadAds() {
                     console.error('Ad banner element not found');
                 }
             } else {
-                console.log('No eligible ads to display');
+                console.log('No eligible ads to display based on schedule.');
                 const adBanner = document.getElementById('big-ad-banner');
                 if (adBanner) {
                     adBanner.style.display = 'none';

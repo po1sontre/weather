@@ -22,6 +22,10 @@
                 <h2>Upload New Ad</h2>
                 <form id="adForm" class="upload-form">
                     <div class="form-group">
+                        <label for="adName">Ad Name</label>
+                        <input type="text" id="adName" name="name" placeholder="Enter ad name" required>
+                    </div>
+                    <div class="form-group">
                         <label for="adImage">Ad Image</label>
                         <div class="file-upload">
                             <input type="file" id="adImage" name="image" accept="image/*" required>
@@ -66,7 +70,7 @@
                 <h3>Schedule Ad</h3>
                 <button class="close-modal">&times;</button>
             </div>
-            <form id="scheduleForm" class="schedule-form">
+            <form id="scheduleForm" class="schedule-form" onsubmit="return false;">
                 <input type="hidden" id="scheduleAdId">
                 
                 <div class="form-group">
@@ -82,7 +86,7 @@
                 </div>
                 
                 <div class="form-actions">
-                    <button type="submit" class="schedule-btn">Schedule Ad</button>
+                    <button type="submit" id="scheduleSubmitBtn" class="schedule-btn">Schedule Ad</button>
                     <button type="button" class="cancel-btn">Cancel</button>
                 </div>
             </form>

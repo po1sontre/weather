@@ -876,3 +876,21 @@ small {
     color: #007bff;
     margin-right: 4px;
 }
+
+.ad-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    text-align: left;
+    word-break: break-word;
+}
+
+.ad-name-public {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    text-align: center;
+    word-break: break-word;
+}
