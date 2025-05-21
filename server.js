@@ -37,6 +37,16 @@ app.get('/', (req, res) => {
     }
 });
 
+// Handler for /gen route - serve gen.html from public directory
+app.get('/gen', (req, res) => {
+    try {
+        res.sendFile(path.join(__dirname, 'public', 'gen.html'));
+    } catch (error) {
+        console.error('Error serving gen.html:', error);
+        res.status(500).send('Error loading page');
+    }
+});
+
 // Catch-all route handler - serve index.html for all other routes
 app.get('*', (req, res) => {
     try {

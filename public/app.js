@@ -68,7 +68,13 @@ const TRANSLATIONS = {
         october: 'October',
         november: 'November',
         december: 'December',
-        forecastNote: 'Note: This forecast covers the entire district, not just'
+        forecastNote: 'Note: This forecast covers the entire district, not just',
+        cities: {
+            'Bolzano': 'Bolzano',
+            'Merano': 'Merano',
+            'Bressanone': 'Bressanone',
+            'Brunico': 'Brunico'
+        }
     },
     de: {
         feelsLike: 'Gefühlt',
@@ -130,7 +136,13 @@ const TRANSLATIONS = {
         october: 'Oktober',
         november: 'November',
         december: 'Dezember',
-        forecastNote: 'Hinweis: Diese Vorhersage gilt für den gesamten Bezirk, nicht nur für'
+        forecastNote: 'Hinweis: Diese Vorhersage gilt für den gesamten Bezirk, nicht nur für',
+        cities: {
+            'Bolzano': 'Bozen',
+            'Merano': 'Meran',
+            'Bressanone': 'Brixen',
+            'Brunico': 'Bruneck'
+        }
     },
     it: {
         feelsLike: 'Percepita',
@@ -192,7 +204,13 @@ const TRANSLATIONS = {
         october: 'Ottobre',
         november: 'Novembre',
         december: 'Dicembre',
-        forecastNote: 'Nota: Questa previsione copre l\'intero distretto, non solo'
+        forecastNote: 'Nota: Questa previsione copre l\'intero distretto, non solo',
+        cities: {
+            'Bolzano': 'Bolzano',
+            'Merano': 'Merano',
+            'Bressanone': 'Bressanone',
+            'Brunico': 'Brunico'
+        }
     }
 };
 
@@ -441,7 +459,12 @@ function displayWeather(locationName, weatherData) {
     const shortLocationName = getShortLocationName(locationName);
     
     // Update location
-    document.querySelector('.location').textContent = shortLocationName;
+    const locationElement = document.querySelector('.location');
+    if (locationElement) {
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[shortLocationName];
+        locationElement.textContent = translatedCityName || shortLocationName;
+    }
     
     // Update current weather
     document.querySelector('.temperature').textContent = `${Math.round(weatherData.current_weather.temperature)}°C`;
@@ -1062,8 +1085,10 @@ async function populateCityDropdown() {
             citySelect.innerHTML = `<option value="">${TRANSLATIONS[currentLang].selectCity}</option>`;
             uniqueStations.forEach(station => {
                 const option = document.createElement('option');
-                option.value = station.cleanName;
-                option.textContent = station.cleanName;
+                // Use the cleaned name as the value, but display the translated name if available
+                const displayCityName = TRANSLATIONS[currentLang]?.cities?.[station.cleanName] || station.cleanName;
+                option.value = station.cleanName; // Keep original cleaned name as value for selection logic
+                option.textContent = displayCityName;
                 citySelect.appendChild(option);
             });
         }
@@ -1551,7 +1576,12 @@ function displayStationWeather(station) {
 
     // Location
     const locElem = document.querySelector('.location');
-    if (locElem) locElem.textContent = cleanStationName(station.name);
+    if (locElem) {
+        const cleanName = cleanStationName(station.name);
+        // Check if a translated city name exists
+        const translatedCityName = TRANSLATIONS[currentLang]?.cities?.[cleanName];
+        locElem.textContent = translatedCityName || cleanName;
+    }
 
     // Temperature
     const tempElem = document.querySelector('.temperature');
