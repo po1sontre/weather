@@ -145,17 +145,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            currentAdsContainer.innerHTML = ads.map(ad => `
-                <div class="ad-card" data-id="${ad.id}" data-link="${ad.link}">
-                    <img src="${ad.imageUrl}" alt="Ad ${ad.id}">
-                    <div class="ad-info">
-                        <p class="ad-link">${ad.link}</p>
-                        <div class="ad-actions">
-                            <button onclick="deleteAd('${ad.id}')" class="delete-btn">Delete</button>
+            currentAdsContainer.innerHTML = ads.map(ad => {
+                const status = getAdStatus(ad);
+                const isClickable = status === 'Unscheduled';
+                const cardClass = `ad-card${isClickable ? ' clickable' : ''}`;
+                const onClick = isClickable ? `onclick="openScheduleModal('${ad.id}')"` : '';
+                
+                return `
+                    <div class="${cardClass}" data-id="${ad.id}" data-link="${ad.link}" ${onClick}>
+                        <div class="ad-status-badge ${status.toLowerCase()}">${status}</div>
+                        <img src="${ad.imageUrl}" alt="Ad ${ad.id}">
+                        <div class="ad-info">
+                            <p class="ad-link">${ad.link}</p>
+                            ${ad.schedule ? `
+                                <div class="ad-schedule-info">
+                                    <p><i class="fas fa-calendar"></i> ${formatDate(ad.schedule.startDate)} - ${formatDate(ad.schedule.endDate)}</p>
+                                </div>
+                            ` : `
+                                <div class="ad-schedule-info clickable-hint">
+                                    <p><i class="fas fa-info-circle"></i> Click to schedule this ad</p>
+                                </div>
+                            `}
+                            <div class="ad-actions">
+                                <button onclick="event.stopPropagation(); deleteAd('${ad.id}')" class="delete-btn">Delete</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } catch (error) {
             console.error('Error loading ads:', error);
             currentAdsContainer.innerHTML = '<div class="error">Error loading ads. Please try again.</div>';
@@ -464,4 +481,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial load
     loadAds();
+
+    // Make openScheduleModal available globally
+    window.openScheduleModal = function(adId) {
+        const modal = document.getElementById('scheduleModal');
+        const scheduleForm = document.getElementById('scheduleForm');
+        
+        // Reset form
+        scheduleForm.reset();
+        
+        // Set the ad ID in a hidden input
+        document.getElementById('scheduleAdId').value = adId;
+        
+        // Show modal
+        modal.classList.add('show');
+    };
+
+    // Update the schedule form submission handler
+    document.getElementById('scheduleForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const adId = document.getElementById('scheduleAdId').value;
+        if (!adId) {
+            showError('No ad selected for scheduling');
+            return;
+        }
+        
+        const formData = new FormData(this);
+        const scheduleData = {
+            startDate: formData.get('startDate'),
+            endDate: formData.get('endDate'),
+            displayDays: [0, 1, 2, 3, 4, 5, 6], // Show every day by default
+            startTime: '00:00', // Show all day by default
+            endTime: '23:59',
+            priority: 5 // Default priority
+        };
+        
+        try {
+            const response = await fetch(`/api/ads/${adId}/schedule`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scheduleData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to schedule ad');
+            }
+            
+            showSuccess('Ad scheduled successfully');
+            document.getElementById('scheduleModal').classList.remove('show');
+            loadCurrentAds(); // Refresh the ad list
+        } catch (error) {
+            console.error('Error scheduling ad:', error);
+            showError('Failed to schedule ad');
+        }
+    });
 });
