@@ -218,6 +218,9 @@ function safeParseFloat(value) {
     return parseFloat(strValue);
 }
 
+// Read ad ID from URL immediately
+const initialAdId = getUrlParameter('ad');
+
 // Initialize language from URL parameter or use default
 function initializeLanguage() {
     const langParam = getUrlParameter('lang');
@@ -1893,7 +1896,7 @@ async function setWeatherBackground(code) {
 }
 
 // Function to load and display ads
-async function loadAds() {
+async function loadAds(adIdFromUrl = null) {
     try {
         const response = await fetch('/api/ads');
         if (!response.ok) {
@@ -1903,7 +1906,7 @@ async function loadAds() {
         
         // Get ad id from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const adId = urlParams.get('ad');
+        const adId = adIdFromUrl || urlParams.get('ad');
         let selectedAd = null;
         if (adId) {
             selectedAd = ads.find(ad => ad.id === adId);
@@ -1955,8 +1958,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCurrentTime();
     setInterval(updateCurrentTime, 60000);
     
-    // Load ads
-    loadAds();
+    // Load ads, passing the initial ad ID from the URL
+    loadAds(initialAdId);
 });
 
 // Add video error recovery to initialization
