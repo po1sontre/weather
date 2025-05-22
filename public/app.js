@@ -1462,7 +1462,7 @@ function displayStationWeather(station) {
     let weatherCode;
     
     // Use the new rain detection function first if weatherCode is not available
-    if (station.weatherCode === undefined) {
+    if (station.weatherCode === undefined || station.weatherCode === null || station.weatherCode === '') {
         const isRaining = isRainingNow(station);
         
         const temp = safeParseFloat(station.t);
@@ -1778,17 +1778,58 @@ async function setWeatherBackground(code) {
     const videoId = getVideoIdForWeatherCode(code);
     console.log(`Setting weather background for code ${code} -> video ${videoId}`);
     
-    // Hide all videos first
-    document.querySelectorAll('.weather-video').forEach(video => {
-        video.style.display = 'none';
-        video.pause();
-    });
+    // If the current active video is already the correct one, do nothing
+    if (currentActiveVideoId === videoId) {
+        console.log(`Video ${videoId} is already active. Doing nothing.`);
+        return;
+    }
+
+    // Hide and pause the previously active video, if any
+    if (currentActiveVideoId) {
+        const prevVideoElement = document.getElementById(currentActiveVideoId);
+        if (prevVideoElement) {
+            prevVideoElement.style.display = 'none';
+            prevVideoElement.pause();
+             // Reset currentTime when hiding/pausing
+            prevVideoElement.currentTime = 0;
+        }
+    }
+
+    // Update the tracking variable
+    currentActiveVideoId = videoId;
 
     // Get and handle the active video
     const videoElement = document.getElementById(videoId);
-    if (videoElement) {
+    if (!videoElement) {
+        console.error(`Video element not found: ${videoId}`);
+        return;
+    }
+
+    try {
+        // Show the video
         videoElement.style.display = 'block';
-        await forceReloadVideo(videoElement);
+        
+        // Get or create source element
+        let source = videoElement.querySelector('source');
+        if (!source) {
+            source = document.createElement('source');
+            videoElement.appendChild(source);
+        }
+        
+        // Only set the source and load if it's a new video or source wasn't set
+        const basePath = `components/decorations/${videoId}.mp4`;
+        if (source.src !== `${window.location.origin}${basePath}?t=${Date.now()}`) { // Avoid unnecessary source updates
+             source.src = `${basePath}?t=${Date.now()}`;
+             videoElement.load(); // Load the new source
+             console.log(`Loading new source for ${videoId}: ${source.src}`);
+        }
+
+        // Attempt to play the video
+        await videoElement.play();
+        console.log(`Attempting to play ${videoId}`);
+    } catch (e) {
+        console.error(`Failed to play ${videoId}:`, e);
+        // You might want to add fallback logic here if play fails
     }
 }
 
@@ -2003,49 +2044,6 @@ async function forceReloadVideo(video) {
     }
 }
 
-// Simplified setWeatherBackground function
-async function setWeatherBackground(code) {
-    // Get the video ID for this weather code
-    const videoId = getVideoIdForWeatherCode(code);
-    console.log(`Setting weather background for code ${code} -> video ${videoId}`);
-    
-    // Hide all videos first
-    document.querySelectorAll('.weather-video').forEach(video => {
-        video.style.display = 'none';
-        video.pause();
-    });
-
-    // Get and handle the active video
-    const videoElement = document.getElementById(videoId);
-    if (!videoElement) {
-        console.error(`Video element not found: ${videoId}`);
-        return;
-    }
-
-    try {
-        // Show the video
-        videoElement.style.display = 'block';
-        
-        // Get or create source element
-        let source = videoElement.querySelector('source');
-        if (!source) {
-            source = document.createElement('source');
-            videoElement.appendChild(source);
-        }
-        
-        // Set the source
-        const basePath = `components/decorations/${videoId}.mp4`;
-        source.src = `${basePath}?t=${Date.now()}`;
-        
-        // Load and play
-        videoElement.load();
-        await videoElement.play();
-        console.log(`Successfully playing ${videoId}`);
-    } catch (e) {
-        console.error(`Failed to play ${videoId}:`, e);
-    }
-}
-
 // Enhanced helper function to safely get a translation string, supporting dot notation for nested keys
 function t(key) {
     if (!TRANSLATIONS) return key;
@@ -2064,3 +2062,6 @@ function t(key) {
     if (window.FALLBACK_TRANSLATIONS && window.FALLBACK_TRANSLATIONS[key]) return window.FALLBACK_TRANSLATIONS[key];
     return key;
 }
+
+// Keep track of the currently active video ID
+let currentActiveVideoId = null;
