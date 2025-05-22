@@ -1568,8 +1568,8 @@ function displayStationWeather(station) {
     updateCurrentTime();
 }
 
-// Auto-refresh every 15 minutes
-setInterval(fetchWeatherData, 15 * 60 * 1000);
+// Auto-refresh every 5 minutes
+setInterval(fetchWeatherData, 5 * 60 * 1000);
 
 function updateCurrentTime() {
     // Update the time display in the weather header
