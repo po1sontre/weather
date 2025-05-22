@@ -381,14 +381,17 @@ async function getLocationName(lat, lng) {
 
 // Function to standardize weather codes from various sources to our WMO-based system
 function standardizeWeatherCode(code, desc = '') {
+    // First check if we have direct precipitation data
+    if (code === 'f') return 61; // rain
+    if (code === 'g') return 71; // snow
+    
     // Convert SIAG codes or descriptions to standardized WMO codes
     if (typeof code === 'string') {
         // Handle SIAG letter codes
         if (code === 'b') return 0;  // clear/sunny
         if (code === 'c') return 2;  // partly cloudy
         if (code === 'd') return 3;  // overcast/cloudy
-        if (code === 'f') return 61; // rain
-        if (code === 'g') return 71; // snow
+        // Keep other codes, removed 'f' and 'g' as handled above
         if (code === 'h') return 45; // fog
         if (code === 'i') return 95; // thunderstorm
     }
@@ -475,8 +478,64 @@ function standardizeWeatherCode(code, desc = '') {
         }
     }
     
+    // If we get here and have precipitation in description, use that as a fallback
+    if (desc && /rain|regen|pioggia|precipit/i.test(desc)) {
+        return 61; // Default to light rain
+    }
+    
     // Default to partly cloudy if we can't determine
     return 2;
+}
+
+// --- Rain detection using 'n' (daily precipitation) and 'lastUpdated' ---
+// This function keeps track of the previous precipitation value for each station (by id or name)
+// and infers if it is currently raining by checking if 'n' increased since the last update.
+// If the last update is recent (e.g., within 15 minutes) and 'n' increased, we guess it's raining now.
+const rainDetectionState = {};
+
+function isRainingNow(station) {
+    try {
+        if (!station) return false;
+        
+        const key = station.id || station.name;
+        if (!key) return false;
+        
+        const currentN = safeParseFloat(station.n);
+        if (isNaN(currentN)) return false;
+        
+        let currentLastUpdated;
+        try {
+            currentLastUpdated = new Date(station.lastUpdated);
+            if (isNaN(currentLastUpdated.getTime())) return false;
+        } catch (e) {
+            return false;
+        }
+        
+        const now = new Date();
+        const isRecent = (now - currentLastUpdated) < 15 * 60 * 1000;
+        
+        let isRaining = false;
+        if (rainDetectionState[key]) {
+            const { prevN, prevLastUpdated } = rainDetectionState[key];
+            if (
+                typeof prevN === 'number' &&
+                currentN > prevN &&
+                isRecent
+            ) {
+                isRaining = true;
+            }
+        }
+        
+        rainDetectionState[key] = { 
+            prevN: currentN, 
+            prevLastUpdated: currentLastUpdated 
+        };
+        
+        return isRaining;
+    } catch (error) {
+        console.error('Error in rain detection:', error);
+        return false;
+    }
 }
 
 // Main function to fetch and process weather data
@@ -1399,70 +1458,66 @@ function displayStationWeather(station) {
         weatherInfo = station.description;
     }
     
-    // Get weather code using standardization function
+    // Get weather code using standardization function or new detection
     let weatherCode;
-    if (station.weatherCode !== undefined) {
-        weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
-    } else {
-        // If no weather code, determine from station data
+    
+    // Use the new rain detection function first if weatherCode is not available
+    if (station.weatherCode === undefined) {
+        const isRaining = isRainingNow(station);
+        
         const temp = safeParseFloat(station.t);
+        // No need for humidity/hour/isNight here if relying solely on isRainingNow for rain
         
-        // Parse humidity, handling potential string values
-        let humidity = station.rh;
-        if (typeof humidity === 'string') {
-            humidity = humidity.replace(',', '.');
-        }
-        humidity = parseFloat(humidity);
-        
-        // Check if we have precipitation data
-        const hasPrecipitation = station.precipitationSum !== undefined && station.precipitationSum > 0;
-        
-        // Get current time to check if it's night
-        const now = new Date();
-        const hour = now.getHours();
-        const isNight = hour < 6 || hour >= 19;
-        
-        // Enhanced weather code determination based on multiple conditions
-        if (hasPrecipitation) {
+        if (isRaining) {
             if (temp < 2) {
-                // Precipitation when cold - likely snow
-                weatherCode = 71; // Light snow
+                weatherCode = 71; // Light snow (if cold enough)
             } else {
-                // Precipitation when warmer - rain
-                weatherCode = 61; // Light rain
+                weatherCode = 61; // Light rain (if warmer)
             }
-        } else if (temp < 0) {
-            // Below freezing
-            if (humidity > 80) {
-                weatherCode = 71; // Light snow
-            } else {
-                // Cold but clear/partly cloudy
-                weatherCode = isNight ? 1 : 0;
-            }
-        } else if (temp > 30) {
-            // Very hot - likely clear or partly cloudy
-            weatherCode = humidity > 50 ? 2 : 0;
-        } else if (humidity > 85) {
-            // Very humid - likely overcast or foggy
-            weatherCode = humidity > 95 ? 45 : 3; // Fog or overcast
-        } else if (humidity > 70) {
-            // Medium-high humidity - overcast or partly cloudy
-            weatherCode = 3; // Overcast
-        } else if (humidity > 50) {
-            // Medium humidity - partly cloudy
-            weatherCode = 2; // Partly cloudy
-        } else if (humidity > 30) {
-            // Low-medium humidity - mainly clear
-            weatherCode = 1; // Mainly clear
+            console.log(`Rain detected via n and lastUpdated: using code ${weatherCode}`);
         } else {
-            // Low humidity - likely clear
-            weatherCode = 0; // Clear sky
+             // If not raining based on n and lastUpdated, fallback to other conditions
+            const humidity = safeParseFloat(station.rh);
+            const hour = new Date().getHours();
+            const isNight = hour < 6 || hour >= 19;
+
+            if (temp < 0) {
+                // Below freezing
+                if (humidity > 80) {
+                    weatherCode = 71; // Light snow
+                } else {
+                    // Cold but clear/partly cloudy
+                    weatherCode = isNight ? 1 : 0;
+                }
+            } else if (temp > 30) {
+                // Very hot - likely clear or partly cloudy
+                weatherCode = humidity > 50 ? 2 : 0;
+            } else if (humidity > 85) {
+                // Very humid - likely overcast or foggy
+                weatherCode = humidity > 95 ? 45 : 3; // Fog or overcast
+            } else if (humidity > 70) {
+                // Medium-high humidity - overcast or partly cloudy
+                weatherCode = 3; // Overcast
+            } else if (humidity > 50) {
+                // Medium humidity - partly cloudy
+                weatherCode = 2; // Partly cloudy
+            } else if (humidity > 30) {
+                // Low-medium humidity - mainly clear
+                weatherCode = 1; // Mainly clear
+            } else {
+                // Low humidity - likely clear
+                weatherCode = 0; // Clear sky
+            }
+            console.log(`Determined weather from other conditions: temp=${temp}°C, humidity=${humidity}%, night=${isNight}`);
         }
-        
-        console.log(`Determined weather from conditions: temp=${temp}°C, humidity=${humidity}%, precipitation=${hasPrecipitation}, night=${isNight}`);
+
+    } else {
+         // If station.weatherCode is available, use it and standardize
+        weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
+        console.log(`Using station.weatherCode: ${station.weatherCode} -> standardized to ${weatherCode}`);
     }
     
-    console.log(`Determined weather code: ${weatherCode}`);
+    console.log(`Final determined weather code: ${weatherCode}`);
     setWeatherIcon(weatherCode);
 
     // Humidity
