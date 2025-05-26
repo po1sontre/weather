@@ -1461,13 +1461,22 @@ function displayStationWeather(station) {
     // Get weather code using standardization function or new detection
     let weatherCode;
     
-    // Use the new rain detection function first if weatherCode is not available
-    if (station.weatherCode === undefined || station.weatherCode === null || station.weatherCode === '') {
+    // Prioritize station.weatherCode and station.description if available
+    if (station.weatherCode !== undefined && station.weatherCode !== null && station.weatherCode !== '') {
+         // If station.weatherCode is available, use it and standardize
+        weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
+        console.log(`Using station.weatherCode: ${station.weatherCode} -> standardized to ${weatherCode}`);
+    } else if (weatherInfo) {
+        // If weatherCode is not available, but description is, use description
+        weatherCode = standardizeWeatherCode(null, weatherInfo);
+        console.log(`Using station.description: "${weatherInfo}" -> standardized to ${weatherCode}`);
+    } else {
+         // If neither code nor description is available, use the rain detection
         const isRaining = isRainingNow(station);
-        
+
         const temp = safeParseFloat(station.t);
         // No need for humidity/hour/isNight here if relying solely on isRainingNow for rain
-        
+
         if (isRaining) {
             if (temp < 2) {
                 weatherCode = 71; // Light snow (if cold enough)
@@ -1476,7 +1485,7 @@ function displayStationWeather(station) {
             }
             console.log(`Rain detected via n and lastUpdated: using code ${weatherCode}`);
         } else {
-             // If not raining based on n and lastUpdated, fallback to other conditions
+             // If not raining based on n and lastUpdated, fallback to other conditions (humidity/temp)
             const humidity = safeParseFloat(station.rh);
             const hour = new Date().getHours();
             const isNight = hour < 6 || hour >= 19;
@@ -1495,7 +1504,7 @@ function displayStationWeather(station) {
             } else if (humidity > 85) {
                 // Very humid - likely overcast or foggy
                 weatherCode = humidity > 95 ? 45 : 3; // Fog or overcast
-            } else if (humidity > 70) {
+            } else if (humidity > 80) {
                 // Medium-high humidity - overcast or partly cloudy
                 weatherCode = 3; // Overcast
             } else if (humidity > 50) {
@@ -1510,13 +1519,8 @@ function displayStationWeather(station) {
             }
             console.log(`Determined weather from other conditions: temp=${temp}°C, humidity=${humidity}%, night=${isNight}`);
         }
-
-    } else {
-         // If station.weatherCode is available, use it and standardize
-        weatherCode = standardizeWeatherCode(station.weatherCode, weatherInfo);
-        console.log(`Using station.weatherCode: ${station.weatherCode} -> standardized to ${weatherCode}`);
     }
-    
+
     console.log(`Final determined weather code: ${weatherCode}`);
     setWeatherIcon(weatherCode);
 
